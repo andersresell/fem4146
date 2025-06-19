@@ -3,7 +3,7 @@ import shape_functions
 import numpy as np
 from utils import Config
 from mesh import Mesh
-im
+from scipy.sparse import csr_matrix
 
 
 class SolverData:
@@ -13,6 +13,9 @@ class SolverData:
         self.R = None
         self.K = None
 
+        self.A = None
+        self.b = None
+
 
 def create_solver_data(config: Config, mesh: Mesh):
     solver_data = SolverData()
@@ -21,7 +24,6 @@ def create_solver_data(config: Config, mesh: Mesh):
     n_eqs = NUM_DOFS * nN
     solver_data.r = np.zeros(n_eqs)
     solver_data.R = np.zeros_like(solver_data.r)
-    solver_data.K = 
     return solver_data
 
 

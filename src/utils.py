@@ -1,4 +1,16 @@
 from element_utils import *
+from typing import List
+
+
+#====================================================================
+# Boundary condition
+#====================================================================
+class BC:
+
+    def __init__(self):
+        self.node_set_name = None
+        self.value = None
+        self.dof = None
 
 
 #====================================================================
@@ -9,9 +21,11 @@ class Config:
     def __init__(self):
         self.E = None  #Young's modulus
         self.nu = None  #Poisson's ratio
-        self.t = None  #Plate thickness
+        self.h = None  #Plate thickness
         self.element_type = None  #Element type
         self.problem_type = None  #Plane stress or plate problem
+
+        self.bcs: List[BC] = []  #List of boundary conditions
 
         #====================================================================
         # Plot settings
@@ -19,13 +33,15 @@ class Config:
         self.disp_scaling = 1  #Scaling factor for displacements
         self.show_node_labels = True
         self.plot_external_forces = True
+        self.contour_type = "disp"  #Displacement or stress
+        self.node_scale = 1  #Scales nodes and node labels
 
 
-def create_config(E, nu, t, element_type, problem_type) -> Config:
+def create_config(E, nu, h, element_type, problem_type) -> Config:
     config = Config()
     config.E = E
     config.nu = nu
-    config.t = t
+    config.h = h
     config.element_type = element_type
     config.problem_type = problem_type
 

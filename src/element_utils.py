@@ -9,6 +9,9 @@ SMALL_VAL = 1e-8
 PROBLEM_TYPE_PLANE_STRESS = 0
 PROBLEM_TYPE_PLATE = 1
 
+problem_type_to_string = {PROBLEM_TYPE_PLANE_STRESS: "plane_stress",
+                          PROBLEM_TYPE_PLATE: "plate"}
+
 def get_num_dofs_from_problem_type(problem_type):
     if problem_type == PROBLEM_TYPE_PLANE_STRESS:
         return 2
@@ -40,14 +43,18 @@ ELEMENT_TYPE_Q9 = 4
 ELEMENT_TYPE_Q9R = 5
 ELEMENT_TYPE_Q16 = 6
 
-def element_is_lagrangian(element_type):
+ELEMENT_CATEGORY_LAGRANGIAN = 0
+ELEMENT_CATEGORY_SERENDIPITY = 1
+
+def element_type_to_category(element_type):
     if element_type == ELEMENT_TYPE_Q4 or element_type == ELEMENT_TYPE_Q4R or \
-         element_type == ELEMENT_TYPE_Q9 or element_type == ELEMENT_TYPE_Q9R or \
-         element_type == ELEMENT_TYPE_Q16:
-        return True
+        element_type == ELEMENT_TYPE_Q9 or element_type == ELEMENT_TYPE_Q9R or \
+        element_type == ELEMENT_TYPE_Q16:
+        return ELEMENT_CATEGORY_LAGRANGIAN
+    elif element_type == ELEMENT_TYPE_Q8 or element_type == ELEMENT_TYPE_Q8R:
+        return ELEMENT_CATEGORY_SERENDIPITY
     else:
-        assert element_type == ELEMENT_TYPE_Q8 or element_type == ELEMENT_TYPE_Q8R
-        return False
+        assert False
 
 element_type_to_str =   {ELEMENT_TYPE_Q4:"Q4",
                          ELEMENT_TYPE_Q4R:"Q4R",

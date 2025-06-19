@@ -19,6 +19,10 @@ class Mesh:
         return self.elements.shape[0]
 
 
+#====================================================================
+# Containing logic for creating higher order quad elements from Q4
+# elements
+#====================================================================
 class HigherOrderQuadElementTraits:
 
     Q4_edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
@@ -43,13 +47,25 @@ class HigherOrderQuadElementTraits:
             self.internal_nodes = [8]
             self.corner_nodes = [0, 1, 2, 3]
         elif element_type == ELEMENT_TYPE_Q16:
+            # self.xi_eta = []
+            # for j in range(4):
+            #     for i in range(4):
+            #         self.xi_eta.append((-1 + 2 * i / 3, -1 + 2 * j / 3))
+
+            # self.internal_edge_nodes = [[1, 2], [7, 11], [14, 13], [8, 4]]
+            # self.internal_nodes = [5, 6, 9, 10]
+            # self.corner_nodes = [0, 3, 12, 15]
             self.nNl = 16
-            self.xi_eta = [(-1, -1), (-1 / 3, -1), (1 / 3, -1), (1, -1), (-1, -1 / 3), (-1 / 3, -1 / 3),
-                           (1 / 3, -1 / 3), (1, -1 / 3), (-1, 1 / 3), (-1 / 3, 1 / 3), (1 / 3, 1 / 3), (1, 1 / 3),
-                           (-1, 1), (-1 / 3, 1), (1 / 3, 1), (1, 1)]
-            self.internal_edge_nodes = [[1, 2], [7, 11], [13, 14], [4, 8]]
-            self.internal_nodes = [5, 6, 9, 10]
-            self.corner_nodes = [0, 3, 12, 15]
+            #fmt: off
+            self.xi_eta = [(-1, -1), (1, -1), (1, 1), (-1, 1),
+                           (-1/3, -1), (1/3, -1), (1, -1/3), (1, 1/3),
+                           (1/3, 1), (-1/3, 1), (-1, 1/3), (-1, -1/3),
+                           (-1/3, -1/3), (1/3, -1/3), (1/3, 1/3), (-1/3, 1/3)]
+            #fmt: on
+            self.internal_edge_nodes = [[4, 5], [6, 7], [8, 9], [10, 11]]
+            self.internal_nodes = [12, 13, 14, 15]
+            self.corner_nodes = [0, 1, 2, 3]
+
         else:
             assert False
 
@@ -84,9 +100,10 @@ class HigherOrderQuadElementTraits:
         if Q4_entity >= EDGE0_Q4 and Q4_entity < FACE_Q4:
             for k in range(2):
                 nodeIDs.append(self.corner_nodes[self.Q4_edges[Q4_entity][k]])
-            nodeIDs_internal = self.internal_edge_nodes[Q4_entity]
-            for il in nodeIDs_internal:
-                nodeIDs.append(il)
+            if len(self.internal_edge_nodes) > 0:
+                nodeIDs_internal = self.internal_edge_nodes[Q4_entity]
+                for il in nodeIDs_internal:
+                    nodeIDs.append(il)
         else:
             assert Q4_entity == FACE_Q4
             nodeIDs = [il for il in range(self.nNl)]
@@ -121,7 +138,7 @@ def create_higher_order_quad_mesh_from_Q4_mesh(mesh_Q4: Mesh, config: Config):
     # elements = np.zeros((nE, nNl), dtype=int)
     elements = np.full((nE, nNl), fill_value=-1, dtype=int)
 
-    existing_edges_Q4 = {}  # dict[tuple[int, int], list]
+    existing_edges_Q4 = {}
 
     new_node_counter = nodes_Q4.shape[0]
     for e in range(nE):
@@ -177,14 +194,15 @@ def create_higher_order_quad_mesh_from_Q4_mesh(mesh_Q4: Mesh, config: Config):
             assert I not in elements[e, :]
             elements[e, il] = I
 
-        #Cache all edges that wasn't previously created this element
+        #Cache all edges that wasn't previously created for this element
         for edge_id in range(4):
             I_corner_a = elements[e, element_traits.Q4_edges[edge_id][0]]
             I_corner_b = elements[e, element_traits.Q4_edges[edge_id][1]]
-            if (I_corner_a, I_corner_b) not in existing_edges_Q4:
+            if (I_corner_a, I_corner_b) not in existing_edges_Q4:  # and len(element_traits.internal_edge_nodes) > 0:
                 existing_edges_Q4[(I_corner_a, I_corner_b)] = []
-                for il in element_traits.internal_edge_nodes[edge_id]:
-                    existing_edges_Q4[(I_corner_a, I_corner_b)].append(elements[e, il])
+                if len(element_traits.internal_edge_nodes) > 0:
+                    for il in element_traits.internal_edge_nodes[edge_id]:
+                        existing_edges_Q4[(I_corner_a, I_corner_b)].append(elements[e, il])
 
     #====================================================================
     # Create node sets from the previously created element sets

@@ -12,6 +12,8 @@ from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 import matplotlib.tri as tri
 from matplotlib.collections import LineCollection
+from matplotlib.widgets import Slider, RadioButtons, CheckButtons, TextBox
+from matplotlib.axes import Axes
 
 
 def triangulate_quad_mesh(elements, element_type):
@@ -19,19 +21,21 @@ def triangulate_quad_mesh(elements, element_type):
     outline_glob = []
     for e in range(elements.shape[0]):
         if element_type == ELEMENT_TYPE_Q4 or element_type == ELEMENT_TYPE_Q4R:
+            triangles = []
             quads = [(0, 1, 2, 3)]
             lines = [(0, 1), (1, 2), (2, 3), (3, 0)]
-        elif element_type == ELEMENT_TYPE_Q8 or ELEMENT_TYPE_Q8R:
+        elif element_type == ELEMENT_TYPE_Q8 or element_type == ELEMENT_TYPE_Q8R:
             triangles = [(0, 4, 7), (1, 5, 4), (2, 6, 5), (3, 7, 6)]
             quads = [(4, 5, 6, 7)]
             lines = [(0, 4), (4, 1), (1, 5), (5, 2), (2, 6), (6, 3), (3, 7), (7, 0)]
         elif element_type == ELEMENT_TYPE_Q9 or element_type == ELEMENT_TYPE_Q9R:
+            triangles = []
             quads = [(0, 4, 8, 7), (4, 1, 5, 8), (8, 5, 2, 6), (7, 8, 6, 3)]
             lines = [(0, 4), (4, 1), (1, 5), (5, 2), (2, 6), (6, 3), (3, 7), (7, 0)]
             # quads = [(0, 4, 8, 7), (4, 1, 5, 8), (8, 5, 2, 6), (7, 8, 6, 3)]
             # lines = [(0, 4), (4, 1), (1, 5), (5, 2), (2, 6), (6, 3), (3, 7), (7, 0)]
         elif element_type == ELEMENT_TYPE_Q16:
-            assert False  #fix numbering
+            triangles = []
             quads = [(0, 4, 12, 11), (4, 5, 13, 12), (5, 1, 6, 13), (11, 12, 15, 10), (12, 13, 14, 15), (13, 6, 7, 14),
                      (10, 15, 9, 3), (15, 14, 8, 9), (14, 7, 2, 8)]
             lines = [(0, 4), (4, 5), (5, 1), (1, 6), (6, 7), (7, 2), (2, 8), (8, 9), (9, 3), (3, 10), (10, 11), (11, 0)]
@@ -57,186 +61,131 @@ def get_mesh_bounds(nodes):
     return x_min, x_max, y_min, y_max
 
 
-def plot_arrows(x, y, field_x, field_y, label, color, domain_scale):
-    ARROW_SCALE = 0.0000001
-    ARROW_WIDTH = 0.01
-    scale = ARROW_SCALE * domain_scale
-    plt.quiver(x, y, field_x * scale, field_y * scale, color=color,
-               width=ARROW_WIDTH * domain_scale)  #, scale=ARROW_SCALE * domain_scale,wi)
-    import matplotlib.lines as mlines
-    # Create a proxy handle for the legend
-    arrow_proxy = mlines.Line2D([], [],
-                                color=color,
-                                marker=r'$\rightarrow$',
-                                linestyle='None',
-                                markersize=10,
-                                label=label)
-    plt.legend(handles=[arrow_proxy])
-    plt.axis('equal')
+class Plot:
 
+    def __init__(self, config: Config, mesh: Mesh, solver_data: SolverData):
+        self.fig, self.ax = plt.subplots(figsize=(12, 10), dpi=100)
+        self.cbar = None
 
-def plot_2d(config: Config, mesh: Mesh, solver_data: SolverData):
+        plt.subplots_adjust(left=0.25, bottom=0.25)
 
-    triangles, outlines = triangulate_quad_mesh(mesh.elements, config.element_type)
+        slider_disp_scale = TextBox(plt.axes([0.25, 0.1, 0.65, 0.03]), 'Disp scale', initial=config.disp_scaling)
+        slider_node_scale = Slider(plt.axes([0.25, 0.05, 0.65, 0.03]), 'Node size', 0, 10, valinit=config.node_scale)
+        radio_contour_type = RadioButtons(plt.axes([0.05, 0.7, 0.15, 0.05]), ['Displacement', 'Stress'])
+        check_show_node_labels = CheckButtons(plt.axes([0.05, 0.5, 0.15, 0.05]), ['Show node labels'], [True])
 
-    nN = mesh.get_nN()
-    nE = mesh.get_nE()
-    # elements = mesh.elements
-    nodes = mesh.nodes
+        def update(val):
+            try:
+                config.disp_scaling = float(slider_disp_scale.text)
+            except ValueError:
+                print("Invalid input for displacement scaling. Using default value.")
+                config.disp_scaling = 1.0
 
-    if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
-        u, v = unpack_solution(config, mesh, solver_data.r)
-        u[:] = np.sin(nodes[:, 1])
-        v[:] = np.sin(nodes[:, 0])
+            config.contour_type = radio_contour_type.value_selected
+            config.node_scale = slider_node_scale.val
+            config.show_node_labels = check_show_node_labels.get_status()[0]
 
-        disp_mag = np.sqrt(u**2 + v**2)
-    else:
-        assert False  #FIX
-        assert config.problem_type == PROBLEM_TYPE_PLATE
-        w, thetax, thetay = solver_data.unpack_solution(config, mesh, solver_data)
-        disp_mag = w
-    #  u[:] = np.sin(nodes[:, 0])
+            self.ax.cla()
+            self.plot_2d(config, mesh, solver_data)
+            self.fig.canvas.draw_idle()
 
-    x = nodes[:, 0] + u * config.disp_scaling
-    y = nodes[:, 1] + v * config.disp_scaling
+        slider_disp_scale.on_submit(update)
+        slider_node_scale.on_changed(update)
+        radio_contour_type.on_clicked(update)
+        check_show_node_labels.on_clicked(update)
 
-    plt.figure()
-    #====================================================================
-    # Plot mesh body
-    #====================================================================
-    tris = tri.Triangulation(x, y, triangles)
-    tpc = plt.tripcolor(tris, disp_mag, shading='gouraud')  #, cmap='viridis')
-    cb = plt.colorbar(tpc)
-    cb.set_label(r"$\sqrt{u^2 + v^2}$")
+        update(None)  # initial draw
+        plt.show()
 
-    #====================================================================
-    # Plot outlines
-    #====================================================================
-    segments = [[[x[i], y[i]], [x[j], y[j]]] for i, j in outlines]
-    line_collection = LineCollection(segments, colors='black', linewidths=0.5)
-    plt.gca().add_collection(line_collection)
+    def plot_2d(self, config: Config, mesh: Mesh, solver_data: SolverData):
 
-    #====================================================================
-    # Plot nodes
-    #====================================================================
-    SCALE_NODES = 10
+        triangles, outlines = triangulate_quad_mesh(mesh.elements, config.element_type)
 
-    x_min, x_max, y_min, y_max = get_mesh_bounds(nodes)
-    L_domain = max(x_max - x_min, y_max - y_min)
-    domain_scale = L_domain / np.sqrt(nN)
-    plt.scatter(x, y, color="black", s=domain_scale * SCALE_NODES, zorder=10)
+        nN = mesh.get_nN()
+        nE = mesh.get_nE()
+        # elements = mesh.elements
+        nodes = mesh.nodes
 
-    SCALE_NODELABELS = 50  #should make it independent of figure size
-    if config.show_node_labels:
-        for i in range(nN):
-            plt.text(x[i],
-                     y[i],
-                     str(i),
-                     fontsize=domain_scale * SCALE_NODELABELS,
-                     color="black",
-                     ha="left",
-                     va="bottom",
-                     zorder=20)
+        if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
+            u, v = unpack_solution(config, mesh, solver_data.r)
+            disp_mag = np.sqrt(u**2 + v**2)
+        else:
+            assert False  #FIX
+            assert config.problem_type == PROBLEM_TYPE_PLATE
+            w, thetax, thetay = solver_data.unpack_solution(config, mesh, solver_data)
+            disp_mag = w
+        #  u[:] = np.sin(nodes[:, 0])
 
-    #====================================================================
-    # Plot applied forces
-    #====================================================================
-    if config.problem_type == PROBLEM_TYPE_PLANE_STRESS and config.plot_external_forces:
-        Rx, Ry = unpack_solution(config, mesh, solver_data.R)
-        plot_arrows(x, y, Rx, Ry, "External Forces", "red", domain_scale)
+        x = nodes[:, 0] + u * config.disp_scaling
+        y = nodes[:, 1] + v * config.disp_scaling
 
-    plt.gca().set_aspect('equal')
-    plt.xlabel(r"$x$")
-    plt.ylabel(r"$y$")
+        #====================================================================
+        # Plot mesh body
+        #====================================================================
+        tris = tri.Triangulation(x, y, triangles)
+        tpc = self.ax.tripcolor(tris, disp_mag, shading='gouraud')  #, cmap='viridis')
 
+        fig = self.ax.get_figure()
 
-def plot_3d_mesh(nodes, w, triangles, outlines, scale=1, Rw=np.zeros(0), show_node_labels=True, element_type=-1):
-    w = np.zeros(len(nodes))
+        if self.cbar is None:
+            self.cbar = fig.colorbar(tpc, ax=self.ax)
 
-    assert nodes.shape[0] == len(w)
+        self.cbar.update_normal(tpc)
+        self.cbar.set_label(r"$u^{\mathrm{mag}} = \sqrt{u^2 + v^2}$")
 
-    nodes_3d = np.c_[nodes, w * scale]
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+        #====================================================================
+        # Plot outlines
+        #====================================================================
+        segments = [[[x[i], y[i]], [x[j], y[j]]] for i, j in outlines]
+        line_collection = LineCollection(segments, colors='black', linewidths=0.5)
+        self.ax.add_collection(line_collection)
 
-    # Normalize the displacement values (w) to range [0, 1] for the colormap
-    norm = Normalize(vmin=min(w), vmax=max(w))
-    cmap = cm.viridis  # Choose a colormap
+        #====================================================================
+        # Plot nodes
+        #====================================================================
+        SCALE_NODES = 10
 
-    # Create faces for the triangles and assign colors based on displacement
-    faces = [[nodes_3d[triangle[i]] for i in range(3)] for triangle in triangles]
-    colors = [cmap(norm(np.mean(w[triangle])))
-              for triangle in triangles]  # Color based on avg displacement per triangle
+        x_min, x_max, y_min, y_max = get_mesh_bounds(nodes)
+        L_domain = max(x_max - x_min, y_max - y_min)
+        domain_scale = L_domain / np.sqrt(nN)
+        self.ax.scatter(x, y, color="black", s=config.node_scale * domain_scale * SCALE_NODES, zorder=10)
 
-    # Add the face collection with the assigned colors
-    collection = Poly3DCollection(faces, facecolors=colors, alpha=0.5)
-    ax.add_collection3d(collection)
+        SCALE_NODELABELS = 50  #should make it independent of figure size
+        if config.show_node_labels:
+            for i in range(nN):
+                self.ax.text(x[i],
+                             y[i],
+                             str(i),
+                             fontsize=config.node_scale * domain_scale * SCALE_NODELABELS,
+                             color="black",
+                             ha="left",
+                             va="bottom",
+                             zorder=20)
 
-    # Scatter plot for nodes
-    ax.scatter(nodes_3d[:, 0], nodes_3d[:, 1], nodes_3d[:, 2], c='r', s=0.5, zorder=10)  # plots the nodes
+        #====================================================================
+        # Plot applied forces
+        #====================================================================
+        if config.problem_type == PROBLEM_TYPE_PLANE_STRESS and config.plot_external_forces:
+            Rx, Ry = unpack_solution(config, mesh, solver_data.R)
+            self.plot_arrows(x, y, Rx, Ry, "External Forces", "red", domain_scale)
 
-    if show_node_labels:
-        for i in range(nodes_3d.shape[0]):
-            ax.text(nodes_3d[i, 0], nodes_3d[i, 1], nodes_3d[i, 2], str(i), color="blue", fontsize=8)
+        self.ax.set_aspect('equal')
+        self.ax.set_xlabel(r"$x$")
+        self.ax.set_ylabel(r"$y$")
 
-    # Plot outlines (edges of the mesh)
-    x_outlines = np.zeros(2)
-    y_outlines = np.zeros(2)
-    z_outlines = np.zeros(2)
-    for line in outlines:
-        assert len(line) == 2
-        for i in range(2):
-            x_outlines[i] = nodes_3d[line[i]][0]
-            y_outlines[i] = nodes_3d[line[i]][1]
-            z_outlines[i] = nodes_3d[line[i]][2]
-        ax.plot(np.array(x_outlines), np.array(y_outlines), np.array(z_outlines), color="k")
-
-    # Adjust axis limits
-    x_min = np.min(nodes[:, 0])
-    x_max = np.max(nodes[:, 0])
-    y_min = np.min(nodes[:, 1])
-    y_max = np.max(nodes[:, 1])
-    DOMAIN_SCALE = 1.3
-    L_domain = DOMAIN_SCALE * max(x_max - x_min, y_max - y_min)
-    x_avg = (x_min + x_max) / 2
-    y_avg = (y_min + y_max) / 2
-    ax.set_xlim(x_avg - L_domain / 2, x_avg + L_domain / 2)
-    ax.set_ylim(y_avg - L_domain / 2, y_avg + L_domain / 2)
-    ax.set_zlim(-L_domain / 2, L_domain / 2)
-
-    # Plot applied forces
-    if len(Rw) > 0:
-        max_val = np.max(np.abs(Rw))
-        arrow_scale_ratio = (L_domain / 20) / max_val
-
-        for i in range(len(Rw)):
-            if abs(Rw[i]) > 0:
-                start = nodes_3d[i]
-                dir = arrow_scale_ratio * np.array([0, 0, Rw[i]])
-                ax.quiver(start[0], start[1], start[2], dir[0], dir[1], dir[2], color='r')
-
-    # Add colorbar to show displacement
-    sm = ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, shrink=0.5, aspect=10)
-
-    NUM_TICKS = 8
-    tickvals = np.linspace(np.min(w), np.max(w), NUM_TICKS)
-    ticklabels = []
-    for tickval in tickvals:
-        ticklabels.append("{:.5f}".format(tickval))
-
-    cbar.set_ticks(tickvals)
-    cbar.set_ticklabels(ticklabels)
-    cbar.set_label("Vertical Displacement")
-
-    # Axis labels and title
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-
-    title = ""
-    if element_type in element_type_to_str:
-        title += element_type_to_str[element_type] + ", "
-    title += "Displacement scale = " + str(scale)
-    plt.title(title)
+    def plot_arrows(self, x, y, field_x, field_y, label, color, domain_scale):
+        ARROW_SCALE = 0.0000001
+        ARROW_WIDTH = 0.01
+        scale = ARROW_SCALE * domain_scale
+        self.ax.quiver(x, y, field_x * scale, field_y * scale, color=color,
+                       width=ARROW_WIDTH * domain_scale)  #, scale=ARROW_SCALE * domain_scale,wi)
+        import matplotlib.lines as mlines
+        # Create a proxy handle for the legend
+        arrow_proxy = mlines.Line2D([], [],
+                                    color=color,
+                                    marker=r'$\rightarrow$',
+                                    linestyle='None',
+                                    markersize=10,
+                                    label=label)
+        self.ax.legend(handles=[arrow_proxy])
+        self.ax.axis('equal')
