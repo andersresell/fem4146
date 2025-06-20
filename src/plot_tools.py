@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import signal
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+import scipy.linalg
 from element_utils import *
 from matplotlib import cm
 from mesh import Mesh, QuadElementTraits
@@ -74,25 +75,78 @@ def get_mesh_bounds(nodes):
     return x_min, x_max, y_min, y_max
 
 
+def get_L_domain(nodes):
+    x_min, x_max, y_min, y_max = get_mesh_bounds(nodes)
+    return max(x_max - x_min, y_max - y_min)
+
+
 class Plot:
 
     def __init__(self, config: Config, mesh: Mesh, solver_data: SolverData):
         self.fig, self.ax = plt.subplots(figsize=(12, 10), dpi=100)
         self.cbar = None
 
-        plt.subplots_adjust(left=0.25, bottom=0.25)
+        plt.subplots_adjust(left=0.3, bottom=0.25)
 
-        slider_disp_scale = TextBox(plt.axes([0.25, 0.1, 0.65, 0.03]), 'disp scale', initial=config.disp_scaling)
-        slider_node_scale = Slider(plt.axes([0.25, 0.05, 0.65, 0.03]), 'node size', 0, 10, valinit=config.node_scale)
-        radio_contour_type = RadioButtons(plt.axes([0.05, 0.7, 0.15, 0.05]), ['disp', 'stress'])
-        radio_disp_component = RadioButtons(plt.axes([0.05, 0.6, 0.15, 0.05]), ['mag', 'x', 'y'])
-        radio_stress_component = RadioButtons(plt.axes([0.05, 0.5, 0.15, 0.065]), ['mises', 'xx', 'yy', 'xy'])
-        check_show_node_labels = CheckButtons(plt.axes([0.05, 0.4, 0.15, 0.05]), ['show node labels'],
-                                              [config.show_node_labels])
+        VSPACE_BETWEEN_WIDGETS = 0.04
+        self.curr_vspace_left = 0.9
+
+        def get_vspace_left(height):
+            vspace = self.curr_vspace_left - height / 2
+            assert self.curr_vspace_left > 0.1
+            self.curr_vspace_left -= (height + VSPACE_BETWEEN_WIDGETS)
+            return vspace
+
+        self.curr_vspace_bottom_index = 0
+        vspaces_bottom = np.linspace(0.15, 0.05, 4)
+
+        def get_new_vspace_bottom():
+            assert self.curr_vspace_bottom_index < len(vspaces_bottom)
+            vspace = vspaces_bottom[self.curr_vspace_bottom_index]
+            self.curr_vspace_bottom_index += 1
+            return vspace
+
+        radio_contour_type = RadioButtons(plt.axes([0.05, get_vspace_left(0.05), 0.15, 0.05]), ['disp', 'stress'])
+        radio_contour_type.ax.set_title('Contour type:')
+        radio_disp_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.05), 0.15, 0.05]), ['mag', 'u', 'v'])
+        radio_disp_component.ax.set_title('Disp component:')
+        radio_stress_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.065), 0.15, 0.065]),
+                                              ['mises', 'xx', 'yy', 'xy'])
+        radio_stress_component.ax.set_title('Stress component:')
+        radio_arrows = RadioButtons(plt.axes([0.05, get_vspace_left(0.065), 0.15, 0.065]),
+                                    ['none', 'disp', 'external forces', 'reaction forces'])
+        radio_arrows.ax.set_title('Arrow type:')
+
+        check_buttons = CheckButtons(
+            plt.axes([0.05, get_vspace_left(0.05), 0.15,
+                      0.05]), ['show node labels', 'specify contour limits', 'show mesh', 'show boundary conditions'],
+            [config.show_node_labels, config.specify_contour_limits, config.show_mesh, config.show_bcs])
+        check_buttons.ax.set_title('Options:')
+
+        box_contour_min = TextBox(plt.axes([0.1, get_vspace_left(0.03), 0.04, 0.03]),
+                                  'contour lim min',
+                                  initial=config.contour_min)
+        box_contour_max = TextBox(plt.axes([0.1, get_vspace_left(0.03), 0.04, 0.03]),
+                                  'contour lim max',
+                                  initial=config.contour_max)
+        box_disp_scale = TextBox(plt.axes([0.1, get_vspace_left(0.03), 0.04, 0.03]),
+                                 'disp scale',
+                                 initial=config.disp_scaling)
+
+        slider_node_scale = Slider(plt.axes([0.25, get_new_vspace_bottom(), 0.50, 0.03]),
+                                   'node size',
+                                   0,
+                                   10,
+                                   valinit=config.node_scale)
+        slider_arrow_scale = Slider(plt.axes([0.25, get_new_vspace_bottom(), 0.50, 0.03]),
+                                    'arrow size',
+                                    0,
+                                    10,
+                                    valinit=config.arrow_scale)
 
         def update(val):
             try:
-                config.disp_scaling = float(slider_disp_scale.text)
+                config.disp_scaling = float(box_disp_scale.text)
             except ValueError:
                 print("Invalid input for displacement scaling. Using default value.")
                 config.disp_scaling = 1.0
@@ -100,19 +154,40 @@ class Plot:
             config.contour_type = radio_contour_type.value_selected
             config.disp_component = radio_disp_component.value_selected
             config.stress_component = radio_stress_component.value_selected
+            config.arrow_type = radio_arrows.value_selected
             config.node_scale = slider_node_scale.val
-            config.show_node_labels = check_show_node_labels.get_status()[0]
+            config.arrow_scale = slider_arrow_scale.val
+            config.show_node_labels = check_buttons.get_status()[0]
+            config.specify_contour_limits = check_buttons.get_status()[1]
+            config.show_mesh = check_buttons.get_status()[2]
+            config.show_bcs = check_buttons.get_status()[3]
+
+            try:
+                config.contour_min = float(box_contour_min.text)
+            except ValueError:
+                print("Invalid input for contour min. Using default value.")
+                config.contour_min = 0.0
+
+            try:
+                config.contour_max = float(box_contour_max.text)
+            except ValueError:
+                print("Invalid input for contour max. Using default value.")
+                config.contour_max = 1.0
 
             self.ax.cla()
             self.plot_2d(config, mesh, solver_data)
             self.fig.canvas.draw_idle()
 
-        slider_disp_scale.on_submit(update)
+        box_disp_scale.on_submit(update)
         slider_node_scale.on_changed(update)
+        slider_arrow_scale.on_changed(update)
         radio_contour_type.on_clicked(update)
         radio_disp_component.on_clicked(update)
         radio_stress_component.on_clicked(update)
-        check_show_node_labels.on_clicked(update)
+        radio_arrows.on_clicked(update)
+        check_buttons.on_clicked(update)
+        box_contour_min.on_submit(update)
+        box_contour_max.on_submit(update)
 
         update(None)  # initial draw
         plt.show()
@@ -150,9 +225,9 @@ class Plot:
             if config.contour_type == "disp":
                 if config.disp_component == "mag":
                     vertex_scalar_E = np.sqrt(uE**2 + vE**2)
-                elif config.disp_component == "x":
+                elif config.disp_component == "u":
                     vertex_scalar_E = uE
-                elif config.disp_component == "y":
+                elif config.disp_component == "v":
                     vertex_scalar_E = vE
                 else:
                     print(f"Unknown displacement component form plotting: {config.disp_component}")
@@ -175,34 +250,70 @@ class Plot:
         #====================================================================
 
         tris = tri.Triangulation(xE, yE, triangles)
-        tpc = self.ax.tripcolor(tris, vertex_scalar_E, shading='gouraud')  #, cmap='viridis')
+        if config.specify_contour_limits:
+            vmin = config.contour_min
+            vmax = config.contour_max
+        else:
+            vmin = np.min(vertex_scalar_E)
+            vmax = np.max(vertex_scalar_E)
+
+        tpc = self.ax.tripcolor(tris, vertex_scalar_E, shading='gouraud', cmap='jet', vmin=vmin, vmax=vmax)
 
         fig = self.ax.get_figure()
 
         if self.cbar is None:
             self.cbar = fig.colorbar(tpc, ax=self.ax)
-
         self.cbar.update_normal(tpc)
-        self.cbar.set_label(r"$u^{\mathrm{mag}} = \sqrt{u^2 + v^2}$")
+        vmin, vmax = tpc.get_clim()
+
+        # Force uniformly spaced colorbar ticks
+        NUM_TICKS = 10
+        ticks = np.linspace(vmin, vmax, NUM_TICKS)
+        self.cbar.set_ticks(ticks)
+
+        assert config.problem_type == PROBLEM_TYPE_PLANE_STRESS  #FIX IF USING PLATE PROBLEM
+        if config.contour_type == "disp":
+            if config.disp_component == "mag":
+                self.cbar.set_label(r"$u^{\mathrm{mag}} = \sqrt{u^2 + v^2}$")
+            elif config.disp_component == "x":
+                self.cbar.set_label(r"$u$")
+            elif config.disp_component == "y":
+                self.cbar.set_label(r"$v$")
+            else:
+                print(f"Error: Unknown displacement component for plotting: {config.disp_component}")
+        elif config.contour_type == "stress":
+            if config.stress_component == "mises":
+                self.cbar.set_label(r"$\sigma^{\mathrm{VM}}$")
+            elif config.stress_component == "xx":
+                self.cbar.set_label(r"$\sigma_{\mathrm{xx}}$")
+            elif config.stress_component == "yy":
+                self.cbar.set_label(r"$\sigma_{\mathrm{yy}}$")
+            elif config.stress_component == "xy":
+                self.cbar.set_label(r"$\sigma_{\mathrm{xy}}$")
+            else:
+                print(f"Error: Unknown stress component for plotting: {config.stress_component}")
+        else:
+            print(f"Error: Unknown contour type for plotting: {config.contour_type}")
 
         #====================================================================
         # Plot outlines
         #====================================================================
-        segments = [[[x[i], y[i]], [x[j], y[j]]] for i, j in outlines]
-        line_collection = LineCollection(segments, colors='black', linewidths=0.5)
-        self.ax.add_collection(line_collection)
+        if config.show_mesh:
+            segments = [[[x[i], y[i]], [x[j], y[j]]] for i, j in outlines]
+            line_collection = LineCollection(segments, colors='black', linewidths=0.5)
+            self.ax.add_collection(line_collection)
 
         #====================================================================
         # Plot nodes
         #====================================================================
         SCALE_NODES = 10
 
-        x_min, x_max, y_min, y_max = get_mesh_bounds(nodes)
-        L_domain = max(x_max - x_min, y_max - y_min)
-        domain_scale = L_domain / np.sqrt(nN)
-        self.ax.scatter(x, y, color="black", s=config.node_scale * domain_scale * SCALE_NODES, zorder=10)
+        SCALE_DOMAIN = 20
+        domain_scale = SCALE_DOMAIN / np.sqrt(nN)
+        if config.show_mesh:
+            self.ax.scatter(x, y, color="black", s=config.node_scale * domain_scale * SCALE_NODES, zorder=10)
 
-        SCALE_NODELABELS = 50  #should make it independent of figure size
+        SCALE_NODELABELS = 3
         if config.show_node_labels:
             for i in range(nN):
                 self.ax.text(x[i],
@@ -215,22 +326,65 @@ class Plot:
                              zorder=20)
 
         #====================================================================
-        # Plot applied forces
+        # Plot arrow fields
         #====================================================================
-        if config.problem_type == PROBLEM_TYPE_PLANE_STRESS and config.plot_external_forces:
-            Rx, Ry = unpack_solution(config, mesh, solver_data.R)
-            self.plot_arrows(x, y, Rx, Ry, "External Forces", "red", domain_scale)
+        if config.arrow_type != "none":
+            if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
+                if config.arrow_type == "disp":
+                    self.plot_arrows(x, y, u, v, "disp", "blue", domain_scale, config.arrow_scale)
+                elif config.arrow_type == "external forces":
+                    Rx_ext, Ry_ext = unpack_solution(config, mesh, solver_data.R_ext)
+                    self.plot_arrows(x, y, Rx_ext, Ry_ext, "external forces", "red", domain_scale, config.arrow_scale)
+                elif config.arrow_type == "reaction forces":
+                    R_rea = solver_data.R_int - solver_data.R_ext
+                    Rx_rea, Ry_rea = unpack_solution(config, mesh, R_rea)
+                    self.plot_arrows(x, y, Rx_rea, Ry_rea, "reaction forces", "green", domain_scale, config.arrow_scale)
+                else:
+                    print(f"Unknown arrow type for plotting: {config.arrow_type}")
+                    exit(1)
+            else:
+                assert False  #FIXME
+
+        #====================================================================
+        # Plot boundary conditions
+        #====================================================================
+        if config.show_bcs:
+            assert config.problem_type == PROBLEM_TYPE_PLANE_STRESS  # FIXME
+            L_domain = get_L_domain(mesh.nodes)
+            s = L_domain * 0.02 * domain_scale
+            segments = []
+            for bc in config.bcs:
+                nodeIDs_constrained = mesh.node_sets[bc.node_set_name]
+                for I in nodeIDs_constrained:
+                    x0, y0 = x[I], y[I]
+                    if bc.dof == DOF_U:
+                        segments.append([[x0 - s, y0], [x0 + s, y0]])
+                    elif bc.dof == DOF_V:
+                        segments.append([[x0, y0 - s], [x0, y0 + s]])
+                    else:
+                        raise ValueError("Unsupported DOF in BC")
+            bc_lines = LineCollection(segments, colors='brown', linewidths=5 * domain_scale)
+            self.ax.add_collection(bc_lines)
 
         self.ax.set_aspect('equal')
         self.ax.set_xlabel(r"$x$")
         self.ax.set_ylabel(r"$y$")
 
-    def plot_arrows(self, x, y, field_x, field_y, label, color, domain_scale):
-        ARROW_SCALE = 0.0000001
-        ARROW_WIDTH = 0.01
-        scale = ARROW_SCALE * domain_scale
-        self.ax.quiver(x, y, field_x * scale, field_y * scale, color=color,
-                       width=ARROW_WIDTH * domain_scale)  #, scale=ARROW_SCALE * domain_scale,wi)
+    def plot_arrows(self, x, y, field_x, field_y, label, color, domain_scale, user_scale):
+        ARROW_LENGTH_SCALE = 0.05
+        ARROW_WIDTH_SCALE = 0.001
+        max_vector_norm = np.max(np.sqrt(field_x**2 + field_y**2))
+        #handle normalization in a non singular way
+        field_x_normalized = field_x / (max_vector_norm + 1e-10)  #ensure safe division
+        field_y_normalized = field_y / (max_vector_norm + 1e-10)  #ensure safe division
+        self.ax.quiver(
+            x,
+            y,
+            ARROW_LENGTH_SCALE * user_scale * field_x_normalized,
+            ARROW_LENGTH_SCALE * user_scale * field_y_normalized,
+            color=color,
+            scale=1,  #this scale thing is weird, increasing it makes arrows smaller
+            width=ARROW_WIDTH_SCALE * domain_scale)
         import matplotlib.lines as mlines
         # Create a proxy handle for the legend
         arrow_proxy = mlines.Line2D([], [],

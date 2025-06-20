@@ -10,7 +10,8 @@ class SolverData:
 
     def __init__(self):
         self.r = None
-        self.R = None
+        self.R_ext = None
+        self.R_int = None  #For postprocessing
         self.K = None
 
         self.A = None
@@ -23,12 +24,14 @@ def create_solver_data(config: Config, mesh: Mesh):
     NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
     n_eqs = NUM_DOFS * nN
     solver_data.r = np.zeros(n_eqs)
-    solver_data.R = np.zeros_like(solver_data.r)
+    solver_data.R_ext = np.zeros_like(solver_data.r)
+    solver_data.R_int = np.zeros_like(solver_data.r)
     return solver_data
 
 
 def unpack_solution(config: Config, mesh: Mesh, field: np.ndarray):
     nN = mesh.get_nN()
+    assert field is not None
     assert field.shape[0] == 2 * nN or field.shape[0] == 3 * nN
     if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
         field_x = np.zeros(nN)

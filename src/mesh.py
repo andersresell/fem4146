@@ -69,6 +69,22 @@ class QuadElementTraits:
         else:
             assert False
 
+        #Test that the shape functions are correct
+        for il in range(self.nNl):
+            xi, eta = self.xi_eta[il]
+            N = shape_functions.calc_N(xi, eta, element_type)
+            for i in range(self.nNl):
+                if i == il:
+                    if not np.isclose(N[i], 1.0):
+                        print(
+                            f"Shape function test failed: Shape function for node {i} at xi={xi}, eta={eta} is {N[i]}")
+                        exit(1)
+                else:
+                    if not np.isclose(N[i], 0.0):
+                        print(
+                            f"Shape function test failed: Shape function for node {i} at xi={xi}, eta={eta} is {N[i]}")
+                        exit(1)
+
     def is_corner_node(self, il):
         return il in self.corner_nodes
 

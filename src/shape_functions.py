@@ -97,23 +97,24 @@ def calc_dNdxi_dNdeta_serendipity(xi, eta, element_type):
     dNdxi = np.zeros(nNl)
     dNdeta = np.zeros(nNl)
     if element_type == ELEMENT_TYPE_Q8 or element_type == ELEMENT_TYPE_Q8R:
-        dNdxi[0] = 0.25 * (eta - 1) * (2 * xi + eta)
-        dNdxi[1] = 0.25 * (1 - eta) * (2 * xi - eta)
-        dNdxi[2] = 0.25 * (1 + eta) * (2 * xi + eta)
-        dNdxi[3] = 0.25 * (-1 - eta) * (2 * xi - eta)
-        dNdxi[4] = -xi * (1 - eta)
-        dNdxi[5] = 0.5 * (1 - eta**2)
-        dNdxi[6] = -xi * (1 + eta)
-        dNdxi[7] = -0.5 * (1 - eta**2)
+        #Obtained by symbolic differentiation (sympy)
+        dNdxi[0] = 0.25 * (-eta - 2 * xi) * (eta - 1)
+        dNdxi[1] = 0.25 * (eta - 1) * (eta - 2 * xi)
+        dNdxi[2] = 0.25 * (eta + 1) * (eta + 2 * xi)
+        dNdxi[3] = 0.25 * (-eta + 2 * xi) * (eta + 1)
+        dNdxi[4] = 1.0 * xi * (eta - 1)
+        dNdxi[5] = 0.5 - 0.5 * eta**2
+        dNdxi[6] = -1.0 * xi * (eta + 1)
+        dNdxi[7] = 0.5 * eta**2 - 0.5
 
-        dNdeta[0] = 0.25 * (xi - 1) * (xi + 2 * eta)
-        dNdeta[1] = 0.25 * (1 + xi) * (xi - 2 * eta)
-        dNdeta[2] = 0.25 * (1 + xi) * (xi + 2 * eta)
-        dNdeta[3] = 0.25 * (1 - xi) * (-xi + 2 * eta)
-        dNdeta[4] = -0.5 * (1 - xi**2)
-        dNdeta[5] = -eta * (1 + xi)
-        dNdeta[6] = 0.5 * (1 - xi**2)
-        dNdeta[7] = -eta * (1 - xi)
+        dNdeta[0] = 0.25 * (-2 * eta - xi) * (xi - 1)
+        dNdeta[1] = 0.25 * (2 * eta - xi) * (xi + 1)
+        dNdeta[2] = 0.25 * (2 * eta + xi) * (xi + 1)
+        dNdeta[3] = 0.25 * (-2 * eta + xi) * (xi - 1)
+        dNdeta[4] = 0.5 * xi**2 - 0.5
+        dNdeta[5] = -1.0 * eta * (xi + 1)
+        dNdeta[6] = 0.5 - 0.5 * xi**2
+        dNdeta[7] = eta * (xi - 1)
     else:
         assert False
     return dNdxi, dNdeta

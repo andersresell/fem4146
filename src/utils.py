@@ -30,13 +30,19 @@ class Config:
         #====================================================================
         # Plot settings
         #====================================================================
+        self.show_mesh = True
         self.disp_scaling = 1  #Scaling factor for displacements
         self.show_node_labels = False
-        self.plot_external_forces = True
+        self.show_bcs = False
         self.contour_type = "disp"  #Displacement or stress
         self.disp_component = "mag"
         self.stress_component = "mises"
+        self.arrow_type = "external forces"  #external forces, reaction forces, disp, none
         self.node_scale = 1  #Scales nodes and node labels
+        self.arrow_scale = 1
+        self.specify_contour_limits = False
+        self.contour_min = 0
+        self.contour_max = 1
 
 
 def create_config(E, nu, h, element_type, problem_type) -> Config:

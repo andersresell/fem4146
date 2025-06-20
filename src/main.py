@@ -17,26 +17,16 @@ if __name__ == "__main__":
 
     config = create_config(E, nu, h, element_type, problem_type)
 
-    mesh = create_structured_quad_mesh(config, Lx=4, Ly=0.5, nEx=30, nEy=3)
+    mesh = create_structured_quad_mesh(config, Lx=5, Ly=1, nEx=40, nEy=10)
 
     solver_data = create_solver_data(config, mesh)
 
-    solver_data.R[:] = 1000
+    solver_data.R_ext[:] = 1000
 
     add_boundary_condition(config, mesh, "west", DOF_U, 0)
-    add_boundary_condition(config, mesh, "west", DOF_V, 0)
+    add_boundary_condition(config, mesh, "south_west", DOF_V, 0)
 
     solve(config, solver_data, mesh)
-
-    # solver_data.R[:] = 1
-
-    # plot_tools.plot_3d_mesh(mesh.nodes,
-    #                         mesh.nodes[:, 1],
-    #                         triangles,
-    #                         outlines,
-    #                         scale=1,
-    #                         show_node_labels=True,
-    #                         element_type=element_type)
 
     plot_tools.Plot(config, mesh, solver_data)
 

@@ -58,7 +58,7 @@ def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverDa
     #====================================================================
     K = solver_data.K
     A = lil_matrix(K)
-    b = np.array(solver_data.R)
+    b = np.array(solver_data.R_ext)
 
     NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
     node_sets = mesh.node_sets
@@ -110,6 +110,7 @@ def solve(config: Config, solver_data: SolverData, mesh: Mesh):
 
     solver_data.A = solver_data.A.tocsr()  #Convert to csr matrix for more efficient solving
     solver_data.r = spsolve(solver_data.A, solver_data.b)  #Solve the linear system
+    solver_data.R_int = solver_data.K @ solver_data.r  #Calculate internal forces
 
     elapsed_time = (time.time() - start_time)
     print(f"Solver (assembly and system solution) completed in {elapsed_time:.2f} seconds")

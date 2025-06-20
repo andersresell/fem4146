@@ -55,9 +55,11 @@ def calc_Ke_plane_stress(config: Config, mesh: Mesh, e):
 
 
 def calc_stress_plane_stress(config: Config, mesh: Mesh, nodes, u, v, xi_eta: list[tuple]):
-    #xi_eta are local coords where the stress is sampled for each element
-    nQ = len(xi_eta)
+    #xi_eta is a list of local coords where the stress is sampled for each element. These
+    #need not correspond to the Gauss points
+
     assert config.problem_type == PROBLEM_TYPE_PLANE_STRESS
+    nQ = len(xi_eta)
     element_type = config.element_type
     nNl = element_type_to_nNl[config.element_type]
     elements = mesh.elements
