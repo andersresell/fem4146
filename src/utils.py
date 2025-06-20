@@ -31,9 +31,11 @@ class Config:
         # Plot settings
         #====================================================================
         self.disp_scaling = 1  #Scaling factor for displacements
-        self.show_node_labels = True
+        self.show_node_labels = False
         self.plot_external_forces = True
         self.contour_type = "disp"  #Displacement or stress
+        self.disp_component = "mag"
+        self.stress_component = "mises"
         self.node_scale = 1  #Scales nodes and node labels
 
 

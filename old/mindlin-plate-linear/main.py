@@ -5,27 +5,28 @@ import signal
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import plot_tools
-import element_utils
+import fem_utils
 from mindlin_plate_linear import *
 
 # fmt: off
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 if __name__ == "__main__":
-    nEx = 8
+    nEx = 2
     nEy = 1
     E = 200e9
-    nu =  0.3
-    h = 0.01
-    Lx = 10
-    Ly = 1
+    nu =  0 #0.3
+    Lx = 1
+    Lx_over_h = 100
+    h = Lx/ Lx_over_h
+    Ly = Lx
     p = 100 #distributed load
-    m = 100 #distributed moment
+    m = 0 #distributed moment
     P = p*Ly
     M = m*Ly
     case = "tip moment"
     case = "tip force"
-    element_type = element_utils.TYPE_Q16
+    element_type = fem_utils.TYPE_Q16
     plot_scale = 1
     show_node_labels=True
 
@@ -34,9 +35,9 @@ if __name__ == "__main__":
 
     #supress end to model a cantilever beam
     dof_status = create_dof_status(nN= nodes.shape[0])
-    suppress_boundary(dof_status, "west", element_utils.DOF_W, nEx, nEy, element_type)
-    suppress_boundary(dof_status, "west", element_utils.DOF_THETAY, nEx, nEy, element_type)
-    suppress_boundary(dof_status, "west", element_utils.DOF_THETAX, nEx, nEy, element_type)
+    suppress_boundary(dof_status, "west", fem_utils.DOF_W, nEx, nEy, element_type)
+    suppress_boundary(dof_status, "west", fem_utils.DOF_THETAY, nEx, nEy, element_type)
+    suppress_boundary(dof_status, "west", fem_utils.DOF_THETAX, nEx, nEy, element_type)
 
     # for i in range(nodes.shape[0]):
     #     dof_status[3*i+fem_utils.DOF_THETAX] = fem_utils.DOF_SUPPRESSED
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     Kff,Rf, dof_to_eq_number = assemble(nodes, ind, dof_status, h,E,nu,element_type)
 
     #set "point load" at end to model a tip loaded cantilever
-    nNl_1D=element_utils.element_type_to_nNl_1D[element_type]
+    nNl_1D=fem_utils.element_type_to_nNl_1D[element_type]
     nNy = nEy*(nNl_1D-1)+1
     nNx = nEx*(nNl_1D-1)+1
 
@@ -54,9 +55,9 @@ if __name__ == "__main__":
         for j in range(nNy):
             I = nNx*j + nNx-1
             if case == "tip force":
-                add_point_load(P/nNy,element_utils.DOF_W,I, Rf,dof_to_eq_number)
+                add_point_load(P/nNy,fem_utils.DOF_W,I, Rf,dof_to_eq_number)
             elif case == "tip moment":
-                add_point_load(M/nNy,element_utils.DOF_THETAY,I, Rf,dof_to_eq_number)
+                add_point_load(M/nNy,fem_utils.DOF_THETAY,I, Rf,dof_to_eq_number)
             else: assert False
     else:
         assert load_type== "consistent"

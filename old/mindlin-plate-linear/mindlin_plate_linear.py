@@ -5,7 +5,7 @@ import signal
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import plot_tools
-import element_utils
+import fem_utils
 
 # fmt: off
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -13,8 +13,8 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 def create_mesh_plate(nEx, nEy,Lx,Ly, element_type):
     nE = nEx*nEy
-    nNl = element_utils.element_type_to_nNl[element_type]
-    nNl_1D = element_utils.element_type_to_nNl_1D[element_type]
+    nNl = fem_utils.element_type_to_nNl[element_type]
+    nNl_1D = fem_utils.element_type_to_nNl_1D[element_type]
     nNx = (nNl_1D-1)*nEx+1 #this only makes sense for lagrangian shape funcs
     nNy = (nNl_1D-1)*nEy+1
     nN = nNx*nNy
@@ -24,7 +24,7 @@ def create_mesh_plate(nEx, nEy,Lx,Ly, element_type):
     ind = np.zeros((nE,nNl),dtype=int)
     nodes = np.zeros((nN,2))
 
-    il_to_ij_loc = element_utils.il_to_ij_loc_all[element_type]
+    il_to_ij_loc = fem_utils.il_to_ij_loc_all[element_type]
     for j in range(nNy):
         for i in range(nNx):
             x = i*dx
@@ -43,20 +43,20 @@ def create_mesh_plate(nEx, nEy,Lx,Ly, element_type):
     return nodes,ind
 
 def count_nNx_nNy(nEx,nEy, element_type):
-    nNl_1d = element_utils.element_type_to_nNl_1D[element_type]
+    nNl_1d = fem_utils.element_type_to_nNl_1D[element_type]
     nNx = (nNl_1d-1)*nEx+1
     nNy = (nNl_1d-1)*nEy+1
     return nNx,nNy
 
 def create_dof_status(nN):
-    return np.full(3*nN,element_utils.DOF_FREE, dtype=int)
+    return np.full(3*nN,fem_utils.DOF_FREE, dtype=int)
 
 def suppress_boundary(dof_status, boundary_str, dof_loc, nEx,nEy, element_type):
-    nNl = element_utils.element_type_to_nNl[element_type]
+    nNl = fem_utils.element_type_to_nNl[element_type]
     nNx,nNy = count_nNx_nNy(nEx,nEy,element_type)
     nN = nNx*nNy
     assert nN*3==len(dof_status)
-    assert dof_loc==element_utils.DOF_W or dof_loc==element_utils.DOF_THETAX or dof_loc == element_utils.DOF_THETAY
+    assert dof_loc==fem_utils.DOF_W or dof_loc==fem_utils.DOF_THETAX or dof_loc == fem_utils.DOF_THETAY
 
     nodes_bound = []
     if boundary_str=="west":
@@ -82,7 +82,7 @@ def suppress_boundary(dof_status, boundary_str, dof_loc, nEx,nEy, element_type):
             nodes_bound.append(I)
 
     for I in nodes_bound:
-        dof_status[3*I+dof_loc] = element_utils.DOF_SUPPRESSED
+        dof_status[3*I+dof_loc] = fem_utils.DOF_SUPPRESSED
 
 def add_point_load(val,dof_loc, I, Rf,dof_to_eq_number):
     nN = int(len(dof_to_eq_number)/3)
@@ -91,11 +91,11 @@ def add_point_load(val,dof_loc, I, Rf,dof_to_eq_number):
     assert dof_loc>=0 and dof_loc<3
     dof = 3*I+dof_loc
     eq = dof_to_eq_number[dof]
-    if eq != element_utils.NO_EQ:
+    if eq != fem_utils.NO_EQ:
         Rf[eq] += val
 
 def calc_Ke(coord_x, coord_y, element_type, h, nu, E):
-    nNl = element_utils.element_type_to_nNl[element_type]
+    nNl = fem_utils.element_type_to_nNl[element_type]
     assert len(coord_x)==nNl and len(coord_y) == nNl
 
     D = E*h**3/(12*(1-nu**2))*np.array([[1,nu,0],
@@ -105,9 +105,9 @@ def calc_Ke(coord_x, coord_y, element_type, h, nu, E):
     hs = 5/6*h
 
 
-    nQ = element_utils.element_type_to_nQ[element_type]
-    arr_xi = element_utils.get_arr_xi(nQ)
-    arr_w = element_utils.get_arr_w(nQ)
+    nQ = fem_utils.element_type_to_nQ[element_type]
+    arr_xi = fem_utils.get_arr_xi(nQ)
+    arr_w = fem_utils.get_arr_w(nQ)
 
 
     Ke = np.zeros((3*nNl, 3*nNl))
@@ -117,9 +117,9 @@ def calc_Ke(coord_x, coord_y, element_type, h, nu, E):
             xi = arr_xi[i]
             eta = arr_xi[j]
             weight = arr_w[i]*arr_w[j]
-            N = element_utils.calc_N(xi, eta, element_type)
-            dNdx,dNdy = element_utils.calc_dNdx_dNdy(xi, eta, coord_x,coord_y,element_type)
-            J = element_utils.calc_J(xi,eta,coord_x,coord_y,element_type)
+            N = fem_utils.calc_N(xi, eta, element_type)
+            dNdx,dNdy = fem_utils.calc_dNdx_dNdy(xi, eta, coord_x,coord_y,element_type)
+            J = fem_utils.calc_J(xi,eta,coord_x,coord_y,element_type)
             detJ = np.linalg.det(J)
             assert len(N) == nNl and len(dNdx)==nNl and len(dNdy) == nNl
             Bb = np.zeros((3,3*nNl))
@@ -139,7 +139,7 @@ def calc_Ke(coord_x, coord_y, element_type, h, nu, E):
 
 
 def assemble(nodes,ind,dof_status, h,E,nu,element_type):
-    nNl = element_utils.element_type_to_nNl[element_type]
+    nNl = fem_utils.element_type_to_nNl[element_type]
     nE = ind.shape[0]
     nN = nodes.shape[0]
     assert ind.shape[1] == nNl
@@ -149,14 +149,14 @@ def assemble(nodes,ind,dof_status, h,E,nu,element_type):
     #count number of equations
     n_eqs = 0
     for status in dof_status:
-        if status == element_utils.DOF_FREE:
+        if status == fem_utils.DOF_FREE:
             n_eqs += 1
 
 
-    dof_to_eq_number = np.full(len(dof_status),element_utils.NO_EQ)
+    dof_to_eq_number = np.full(len(dof_status),fem_utils.NO_EQ)
     eq_counter=0
     for i in range(len(dof_status)):
-        if dof_status[i] == element_utils.DOF_FREE:
+        if dof_status[i] == fem_utils.DOF_FREE:
             dof_to_eq_number[i] = eq_counter
             eq_counter+=1
     assert eq_counter==n_eqs
@@ -184,8 +184,8 @@ def assemble(nodes,ind,dof_status, h,E,nu,element_type):
                         dof_J = 3*J+dof_j
                         EQ_I = dof_to_eq_number[dof_I]
                         EQ_J = dof_to_eq_number[dof_J]
-                        if EQ_I != element_utils.NO_EQ and EQ_J != element_utils.NO_EQ:
-                            assert dof_status[dof_I] == element_utils.DOF_FREE and dof_status[dof_J] == element_utils.DOF_FREE
+                        if EQ_I != fem_utils.NO_EQ and EQ_J != fem_utils.NO_EQ:
+                            assert dof_status[dof_I] == fem_utils.DOF_FREE and dof_status[dof_J] == fem_utils.DOF_FREE
                             Kff[EQ_I, EQ_J] += Ke[3*i+dof_i, 3*j+dof_j]
     print("assembly complete")
     return Kff,Rf, dof_to_eq_number
@@ -201,7 +201,7 @@ def solve(Kff, Rf, dof_status, dof_to_eq_number):
     r = np.zeros(len(dof_status))
     for i in range(len(dof_status)):
         eq_num = dof_to_eq_number[i]
-        if eq_num != element_utils.NO_EQ:
+        if eq_num != fem_utils.NO_EQ:
             r[i] = rf[eq_num]
     print("System solved")
     return r
@@ -221,7 +221,7 @@ def get_applied_forces_and_moments_from_Rf(Rf, dof_to_eq_number,nN):
     R=np.zeros(3*nN)
     for i in range(3*nN):
         eq_num = dof_to_eq_number[i]
-        if eq_num != element_utils.NO_EQ:
+        if eq_num != fem_utils.NO_EQ:
             R[i] = Rf[eq_num]
 
     Rw = R[0::3]
@@ -232,19 +232,19 @@ def get_applied_forces_and_moments_from_Rf(Rf, dof_to_eq_number,nN):
 
 
 def calc_Re_ext_consistent_tip_shitty( coord_y, element_type,  t_uniform):
-    nNl = element_utils.element_type_to_nNl[element_type]
+    nNl = fem_utils.element_type_to_nNl[element_type]
 
 
-    nQ = element_utils.element_type_to_nQ[element_type]
-    arr_xi = element_utils.get_arr_xi(nQ)
-    arr_w = element_utils.get_arr_w(nQ)
+    nQ = fem_utils.element_type_to_nQ[element_type]
+    arr_xi = fem_utils.get_arr_xi(nQ)
+    arr_w = fem_utils.get_arr_w(nQ)
     dy = np.max(coord_y)-np.min(coord_y)
     Re = np.zeros(3*nNl)
     for j in range(nQ):
         xi0 = 1.0
         xi1 = arr_xi[j]
         weight = arr_w[j]
-        N = element_utils.calc_N(xi0,xi1,element_type)
+        N = fem_utils.calc_N(xi0,xi1,element_type)
         J_surf = dy/2
         for l in range(nNl):
             Re[3*l] += N[l]*weight*J_surf*t_uniform
@@ -252,7 +252,7 @@ def calc_Re_ext_consistent_tip_shitty( coord_y, element_type,  t_uniform):
 
 
 def assemble_R_consistent(nodes,Rf, dof_to_eq_number,dof_status, ind,element_type, elements, t_uniform):
-    nNl = element_utils.element_type_to_nNl[element_type]
+    nNl = fem_utils.element_type_to_nNl[element_type]
     for e in elements:
         coord_x = np.zeros(nNl)
         coord_y = np.zeros(nNl)
@@ -267,6 +267,6 @@ def assemble_R_consistent(nodes,Rf, dof_to_eq_number,dof_status, ind,element_typ
             for dof_i in range(3):
                 dof_I = 3*I+dof_i
                 EQ_I = dof_to_eq_number[dof_I]
-                if EQ_I != element_utils.NO_EQ:
-                    assert dof_status[dof_I] == element_utils.DOF_FREE
+                if EQ_I != fem_utils.NO_EQ:
+                    assert dof_status[dof_I] == fem_utils.DOF_FREE
                     Rf[EQ_I] += Re[3*i+dof_i]

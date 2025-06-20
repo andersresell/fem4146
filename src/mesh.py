@@ -23,7 +23,7 @@ class Mesh:
 # Containing logic for creating higher order quad elements from Q4
 # elements
 #====================================================================
-class HigherOrderQuadElementTraits:
+class QuadElementTraits:
 
     Q4_edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
 
@@ -125,7 +125,7 @@ def check_if_internal_edge_is_created(existing_edges_Q4, I_corner_a, I_corner_b)
 def create_higher_order_quad_mesh_from_Q4_mesh(mesh_Q4: Mesh, config: Config):
     element_type = config.element_type
 
-    element_traits = HigherOrderQuadElementTraits(element_type)
+    element_traits = QuadElementTraits(element_type)
     nNl = element_traits.nNl
 
     mesh = Mesh()
