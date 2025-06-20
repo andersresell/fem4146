@@ -19,16 +19,13 @@ class Mesh:
         return self.elements.shape[0]
 
 
-#====================================================================
-# Containing logic for creating higher order quad elements from Q4
-# elements
-#====================================================================
 class QuadElementTraits:
+    """Containing logic for creating higher order quad elements from Q4 elements"""
 
     Q4_edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
 
     def __init__(self, element_type):
-        if element_type == ELEMENT_TYPE_Q4:
+        if element_type == ELEMENT_TYPE_Q4 or element_type == ELEMENT_TYPE_Q4R or element_type == ELEMENT_TYPE_Q4_USER:
             self.nNl = 4
             self.xi_eta = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
             self.internal_edge_nodes = []
@@ -47,14 +44,6 @@ class QuadElementTraits:
             self.internal_nodes = [8]
             self.corner_nodes = [0, 1, 2, 3]
         elif element_type == ELEMENT_TYPE_Q16:
-            # self.xi_eta = []
-            # for j in range(4):
-            #     for i in range(4):
-            #         self.xi_eta.append((-1 + 2 * i / 3, -1 + 2 * j / 3))
-
-            # self.internal_edge_nodes = [[1, 2], [7, 11], [14, 13], [8, 4]]
-            # self.internal_nodes = [5, 6, 9, 10]
-            # self.corner_nodes = [0, 3, 12, 15]
             self.nNl = 16
             #fmt: off
             self.xi_eta = [(-1, -1), (1, -1), (1, 1), (-1, 1),
@@ -378,7 +367,16 @@ def create_structured_Q4_mesh(Lx, Ly, nEx, nEy) -> Mesh:
 
 
 def create_structured_quad_mesh(config: Config, Lx, Ly, nEx, nEy) -> Mesh:
-
+    """Creates a structured rectangular quad mesh with the specified parameters.
+    Args:
+        config (Config): Configuration object containing problem parameters.
+        Lx (float): Length of the mesh in the x-direction.
+        Ly (float): Length of the mesh in the y-direction.
+        nEx (int): Number of elements in the x-direction.
+        nEy (int): Number of elements in the y-direction.
+    Returns:
+        Mesh: A Mesh object containing the structured quad mesh.
+    """
     mesh_Q4 = create_structured_Q4_mesh(Lx, Ly, nEx, nEy)
     mesh = create_higher_order_quad_mesh_from_Q4_mesh(mesh_Q4, config)
     return mesh

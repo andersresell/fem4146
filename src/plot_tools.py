@@ -24,7 +24,12 @@ def triangulate_quad_mesh(elements, element_type):
     nNl = element_type_to_nNl[element_type]
     nE = elements.shape[0]
     for e in range(nE):
-        if element_type == ELEMENT_TYPE_Q4 or element_type == ELEMENT_TYPE_Q4R:
+        #====================================================================
+        # The various quads and triangles define the triangulation of the
+        # used for rendering each element. The lines define the outline of the
+        # element.
+        #====================================================================
+        if element_type == ELEMENT_TYPE_Q4 or element_type == ELEMENT_TYPE_Q4R or element_type == ELEMENT_TYPE_Q4_USER:
             triangles = []
             quads = [(0, 1, 2, 3)]
             lines = [(0, 1), (1, 2), (2, 3), (3, 0)]
@@ -56,13 +61,6 @@ def triangulate_quad_mesh(elements, element_type):
         #Line vertices are global
         for line in lines:
             outline_glob.append([element[line[0]], element[line[1]]])
-        # for tri in triangles:
-        #     triangles_glob.append([element[tri[0]], element[tri[1]], element[tri[2]]])
-        # for quad in quads:
-        #     triangles_glob.append([element[quad[0]], element[quad[1]], element[quad[2]]])
-        #     triangles_glob.append([element[quad[0]], element[quad[2]], element[quad[3]]])
-        # for line in lines:
-        #     outline_glob.append([element[line[0]], element[line[1]]])
 
     return np.array(triangles_glob, dtype=int), np.array(outline_glob, dtype=int)
 
@@ -83,6 +81,10 @@ def get_L_domain(nodes):
 class Plot:
 
     def __init__(self, config: Config, mesh: Mesh, solver_data: SolverData):
+        plt.rcParams.update({
+            'font.size': 11  # or any desired size
+        })
+
         self.fig, self.ax = plt.subplots(figsize=(12, 10), dpi=100)
         self.cbar = None
 
@@ -108,18 +110,18 @@ class Plot:
 
         radio_contour_type = RadioButtons(plt.axes([0.05, get_vspace_left(0.05), 0.15, 0.05]), ['disp', 'stress'])
         radio_contour_type.ax.set_title('Contour type:')
-        radio_disp_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.05), 0.15, 0.05]), ['mag', 'u', 'v'])
+        radio_disp_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.06), 0.15, 0.06]), ['mag', 'u', 'v'])
         radio_disp_component.ax.set_title('Disp component:')
-        radio_stress_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.065), 0.15, 0.065]),
+        radio_stress_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.07), 0.15, 0.07]),
                                               ['mises', 'xx', 'yy', 'xy'])
         radio_stress_component.ax.set_title('Stress component:')
-        radio_arrows = RadioButtons(plt.axes([0.05, get_vspace_left(0.065), 0.15, 0.065]),
+        radio_arrows = RadioButtons(plt.axes([0.05, get_vspace_left(0.07), 0.15, 0.07]),
                                     ['none', 'disp', 'external forces', 'reaction forces'])
         radio_arrows.ax.set_title('Arrow type:')
 
         check_buttons = CheckButtons(
-            plt.axes([0.05, get_vspace_left(0.05), 0.15,
-                      0.05]), ['show node labels', 'specify contour limits', 'show mesh', 'show boundary conditions'],
+            plt.axes([0.05, get_vspace_left(0.07), 0.15,
+                      0.07]), ['show node labels', 'specify contour limits', 'show mesh', 'show boundary conditions'],
             [config.show_node_labels, config.specify_contour_limits, config.show_mesh, config.show_bcs])
         check_buttons.ax.set_title('Options:')
 
@@ -199,14 +201,13 @@ class Plot:
         nN = mesh.get_nN()
         nNl = element_type_to_nNl[config.element_type]
         nE = mesh.get_nE()
-        # elements = mesh.elements
         nodes = mesh.nodes
         u, v = unpack_solution(config, mesh, solver_data.r)
 
         #Global coordinates
         x = nodes[:, 0] + u * config.disp_scaling
         y = nodes[:, 1] + v * config.disp_scaling
-        #Coorinades local to the element
+        #Coordinades local to the element
         xE = np.zeros(nE * nNl)
         yE = np.zeros(nE * nNl)
         uE = np.zeros(nE * nNl)
@@ -236,9 +237,6 @@ class Plot:
                 assert config.contour_type == "stress"
                 vertex_scalar_E = self.calculate_vertex_scalar_from_stress_plane_stress_problem(
                     config, mesh, solver_data)
-                # vertex_scalar_E = np.zeros(nE * nNl)
-                # vertex_scalar_E[:] = 1
-
         else:
             assert False  #FIXME
             assert config.problem_type == PROBLEM_TYPE_PLATE
@@ -248,7 +246,6 @@ class Plot:
         #====================================================================
         # Plot mesh body
         #====================================================================
-
         tris = tri.Triangulation(xE, yE, triangles)
         if config.specify_contour_limits:
             vmin = config.contour_min
@@ -261,6 +258,9 @@ class Plot:
 
         fig = self.ax.get_figure()
 
+        #====================================================================
+        # Colorbar
+        #====================================================================
         if self.cbar is None:
             self.cbar = fig.colorbar(tpc, ax=self.ax)
         self.cbar.update_normal(tpc)
@@ -275,9 +275,9 @@ class Plot:
         if config.contour_type == "disp":
             if config.disp_component == "mag":
                 self.cbar.set_label(r"$u^{\mathrm{mag}} = \sqrt{u^2 + v^2}$")
-            elif config.disp_component == "x":
+            elif config.disp_component == "u":
                 self.cbar.set_label(r"$u$")
-            elif config.disp_component == "y":
+            elif config.disp_component == "v":
                 self.cbar.set_label(r"$v$")
             else:
                 print(f"Error: Unknown displacement component for plotting: {config.disp_component}")
@@ -296,7 +296,7 @@ class Plot:
             print(f"Error: Unknown contour type for plotting: {config.contour_type}")
 
         #====================================================================
-        # Plot outlines
+        # Plot lines marking elements
         #====================================================================
         if config.show_mesh:
             segments = [[[x[i], y[i]], [x[j], y[j]]] for i, j in outlines]
@@ -366,6 +366,11 @@ class Plot:
             bc_lines = LineCollection(segments, colors='brown', linewidths=5 * domain_scale)
             self.ax.add_collection(bc_lines)
 
+        if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
+            fig.suptitle(f"Plane stress problem: {element_type_to_str[config.element_type]} element")
+        else:
+            assert config.problem_type == PROBLEM_TYPE_PLATE
+            fig.suptitle(f"Mindlin plate problem: {element_type_to_str[config.element_type]} element")
         self.ax.set_aspect('equal')
         self.ax.set_xlabel(r"$x$")
         self.ax.set_ylabel(r"$y$")

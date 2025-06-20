@@ -6,12 +6,15 @@ from solver_data import SolverData
 from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
 import time
-import element_stiffness
+import element_stiffness, element_stiffness_user
 
 
 def calc_Ke(config: Config, mesh: Mesh, solver_data: SolverData, e):
     if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
-        return element_stiffness.calc_Ke_plane_stress(config, mesh, e)
+        if config.element_type == ELEMENT_TYPE_Q4_USER:
+            return element_stiffness_user.calc_Ke_plane_stress_user_Q4(config, mesh, e)
+        else:
+            return element_stiffness.calc_Ke_plane_stress(config, mesh, e)
     else:
         assert config.problem_type == PROBLEM_TYPE_PLATE
         assert False
@@ -98,6 +101,7 @@ def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverDa
 
 
 def solve(config: Config, solver_data: SolverData, mesh: Mesh):
+    """Assembles the stiffness matrix, applies boundary conditions, and solves the system K*r = R."""
 
     if len(config.bcs) == 0:
         raise Exception("No bcs specified. System will be singular")

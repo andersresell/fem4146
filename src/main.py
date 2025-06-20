@@ -12,7 +12,7 @@ if __name__ == "__main__":
     E = 210e9  # Young's modulus in Pa
     nu = 0.3  # Poisson's ratio
     h = 0.01  # Plate thickness in m
-    element_type = ELEMENT_TYPE_Q16
+    element_type = ELEMENT_TYPE_Q8
     problem_type = PROBLEM_TYPE_PLANE_STRESS
 
     config = create_config(E, nu, h, element_type, problem_type)

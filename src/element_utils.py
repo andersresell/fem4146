@@ -42,12 +42,13 @@ ELEMENT_TYPE_Q8R = 3
 ELEMENT_TYPE_Q9 = 4
 ELEMENT_TYPE_Q9R = 5
 ELEMENT_TYPE_Q16 = 6
+ELEMENT_TYPE_Q4_USER = 7 #Used for creating tasks for students to implement an element
 
 ELEMENT_CATEGORY_LAGRANGIAN = 0
 ELEMENT_CATEGORY_SERENDIPITY = 1
 
 def element_type_to_category(element_type):
-    if element_type == ELEMENT_TYPE_Q4 or element_type == ELEMENT_TYPE_Q4R or \
+    if element_type == ELEMENT_TYPE_Q4 or element_type == ELEMENT_TYPE_Q4R or element_type==ELEMENT_TYPE_Q4_USER or \
         element_type == ELEMENT_TYPE_Q9 or element_type == ELEMENT_TYPE_Q9R or \
         element_type == ELEMENT_TYPE_Q16:
         return ELEMENT_CATEGORY_LAGRANGIAN
@@ -62,18 +63,22 @@ element_type_to_str =   {ELEMENT_TYPE_Q4:"Q4",
                          ELEMENT_TYPE_Q8R: "Q8R",
                          ELEMENT_TYPE_Q9:"Q9",
                          ELEMENT_TYPE_Q9R:"Q9R",
-                         ELEMENT_TYPE_Q16:"Q16",}
+                         ELEMENT_TYPE_Q16:"Q16",
+                         ELEMENT_TYPE_Q4_USER:"Q4_USER"}
 
 element_type_to_nNl = {ELEMENT_TYPE_Q4: 4,
                        ELEMENT_TYPE_Q4R: 4,
+                       ELEMENT_TYPE_Q4_USER: 4,
                        ELEMENT_TYPE_Q8: 8,
                        ELEMENT_TYPE_Q8R: 8,
                        ELEMENT_TYPE_Q9: 9,
                        ELEMENT_TYPE_Q9R: 9,
-                       ELEMENT_TYPE_Q16: 16}
+                       ELEMENT_TYPE_Q16: 16,
+                       ELEMENT_TYPE_Q4_USER: 4}
 
 element_type_to_nNl_1D = {ELEMENT_TYPE_Q4: 2,
                           ELEMENT_TYPE_Q4R: 2,
+                          ELEMENT_TYPE_Q4_USER: 2,
                           ELEMENT_TYPE_Q9: 3,
                           ELEMENT_TYPE_Q9R: 3,
                           ELEMENT_TYPE_Q16: 4}
@@ -88,6 +93,7 @@ element_type_to_nGauss_1D = {ELEMENT_TYPE_Q4: 2,
 
 
 il_to_ij_loc_all ={ELEMENT_TYPE_Q4: [(0,0),(1,0),(1,1),(0,1)],
+                   ELEMENT_TYPE_Q4_USER: [(0,0),(1,0),(1,1),(0,1)],
                    ELEMENT_TYPE_Q4R: [(0,0),(1,0),(1,1),(0,1)],
                    ELEMENT_TYPE_Q9: [(0,0),(2,0),(2,2),(0,2),(1,0),(2,1),(1,2),(0,1),(1,1)],
                    ELEMENT_TYPE_Q9R: [(0,0),(2,0),(2,2),(0,2),(1,0),(2,1),(1,2),(0,1),(1,1)],

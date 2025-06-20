@@ -19,6 +19,7 @@ class SolverData:
 
 
 def create_solver_data(config: Config, mesh: Mesh):
+    """Creates the data structures (system vectors and matrices) needed by the solver."""
     solver_data = SolverData()
     nN = mesh.get_nN()
     NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)

@@ -36,6 +36,10 @@ from element_utils import *
 
 
 def add_boundary_condition(config: Config, mesh: Mesh, node_set_name, dof, value=0):
+    """Adds a prescribed boundary condition for a certain dof to a node set.
+        For instance, if node_set_name is "west", dof is DOF_U, and value is 0, 
+        all nodes in the "west" node set will have their x-displacement (DOF_U) set to 0.
+    """
     node_sets = mesh.node_sets
     bcs = config.bcs
 
