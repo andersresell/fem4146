@@ -1,4 +1,4 @@
-# Educational 2D FEM tool for linear static analysis written in Python
+# Educational 2D FEM tool for static linear analysis written in Python
 
 ---
 
@@ -20,7 +20,7 @@ Note that this mesh is finer than the mesh shown above.*
 
 ---
 
-The following script was used to specify the above problem:
+The following script was used to specify the problem displayed above:
 
 ```python
 from src.useful_imports import *  #import required functions
