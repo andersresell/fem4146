@@ -12,7 +12,7 @@
 
 ![](fem-node-labels.png)
 *The current problem has a linearly varying pressure load p(x)=(L_x-x)p0 applied to the top edge.
-The arrows shown are the external nodal forces arising from consistent load integration of this pressure.*
+The arrows shown are the external nodal forces arising from consistent load integration of this pressure. The brown features on the left edge marks the fixed boundary condition*
 
 ![](fem-stress.png)
 *Von Mises stress (no nodal averaging) computed for each element. Reaction forces that counteract the external forces are also displayed. Note that this mesh is finer than the mesh shown above.*
