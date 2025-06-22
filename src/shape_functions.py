@@ -1,4 +1,4 @@
-from element_utils import *
+from src.fem_utils import *
 
 
 def calc_N_1D(xi, nNl_1d):
@@ -136,23 +136,24 @@ def calc_dNdxi_dNdeta(xi, eta, element_type):
         return calc_dNdxi_dNdeta_serendipity(xi, eta, element_type)
 
 
-def calc_J(xi, eta, coord_x, coord_y, element_type):
+def calc_J(xi, eta, x_l, y_l, element_type):
     dNdxi, dNdeta = calc_dNdxi_dNdeta(xi, eta, element_type)
-    assert len(coord_x) == len(coord_y) and len(coord_x) == len(dNdxi) and len(coord_y) == len(dNdeta)
-    J = np.array([[dNdxi.dot(coord_x), dNdxi.dot(coord_y)], [dNdeta.dot(coord_x), dNdeta.dot(coord_y)]])
+    assert len(x_l) == len(y_l) and len(x_l) == len(dNdxi) and len(y_l) == len(dNdeta)
+    J = np.array([[dNdxi.dot(x_l), dNdxi.dot(y_l)], [dNdeta.dot(x_l), dNdeta.dot(y_l)]])
     assert np.linalg.det(J) > SMALL_VAL
     return J
 
 
-def calc_dNdx_dNdy(xi, eta, coord_x, coord_y, element_type):
+def calc_dNdx_dNdy(xi, eta, x_l, y_l, element_type):
     dNdxi, dNdeta = calc_dNdxi_dNdeta(xi, eta, element_type)
-    J = calc_J(xi, eta, coord_x, coord_y, element_type)
+    J = calc_J(xi, eta, x_l, y_l, element_type)
     dNdXI = np.vstack((dNdxi, dNdeta))
     dNdX = np.linalg.inv(J) @ dNdXI
     return dNdX[0, :], dNdX[1, :]
 
 
 def get_arr_xi(nGauss_1D):
+    """Returns the natural coordinates for the Gauss quadrature rule for 1D integration."""
     if nGauss_1D == 4:
         arr_xi = np.array([
             -np.sqrt(3 / 7 + 2 / 7 * np.sqrt(6 / 5)), -np.sqrt(3 / 7 - 2 / 7 * np.sqrt(6 / 5)),
@@ -172,6 +173,7 @@ def get_arr_xi(nGauss_1D):
 
 
 def get_arr_w(nGauss_1D):
+    """Returns the weights for the Gauss quadrature rule for 1D integration."""
 
     if nGauss_1D == 4:
         arr_w = np.array([

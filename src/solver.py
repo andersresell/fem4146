@@ -1,12 +1,14 @@
-import shape_functions
-from utils import Config
-from mesh import Mesh
-from element_utils import *
-from solver_data import SolverData
 from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
 import time
-import element_stiffness, element_stiffness_user
+from src.utils import Config
+from src.mesh import Mesh
+from src.fem_utils import *
+from src.solver_data import SolverData
+import src.element_stiffness as element_stiffness
+import src.element_stiffness_user as element_stiffness_user
+import src.loads as loads
+import src.bcs as bcs
 
 
 def calc_Ke(config: Config, mesh: Mesh, solver_data: SolverData, e):
@@ -17,8 +19,7 @@ def calc_Ke(config: Config, mesh: Mesh, solver_data: SolverData, e):
             return element_stiffness.calc_Ke_plane_stress(config, mesh, e)
     else:
         assert config.problem_type == PROBLEM_TYPE_PLATE
-        assert False
-    # return calc_Ke_plate(config, mesh, e)
+        return element_stiffness.calc_Ke_mindlin(config, mesh, e)
 
 
 def assemble_stiffness_matrix(mesh: Mesh, config: Config, solver_data: SolverData):
@@ -36,7 +37,6 @@ def assemble_stiffness_matrix(mesh: Mesh, config: Config, solver_data: SolverDat
 
     K = lil_matrix((n_eqs, n_eqs),
                    dtype=np.float64)  #This is more efficient for incrementally assembling sparse matrices
-    # R = np.zeros(n_eqs, dtype=np.float64)
 
     for e in range(nE):
         Ke = calc_Ke(config, mesh, solver_data, e)
@@ -54,52 +54,6 @@ def assemble_stiffness_matrix(mesh: Mesh, config: Config, solver_data: SolverDat
     print("Stiffness matrix assembly complete")
 
 
-def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverData):
-    #====================================================================
-    # We specify boundary condtions by zeroing out the row and column of
-    # the system matrix and modify the right hand side appropriately.
-    #====================================================================
-    K = solver_data.K
-    A = lil_matrix(K)
-    b = np.array(solver_data.R_ext)
-
-    NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
-    node_sets = mesh.node_sets
-    bcs = config.bcs
-    for bc in bcs:
-        nodeIDs = node_sets[bc.node_set_name]
-        dof = bc.dof
-        val = bc.value
-        for I in nodeIDs:
-            eq = I * NUM_DOFS + dof
-            #====================================================================
-            # In the first sweep, we modify the right hand side vector (b) by
-            # the forces created from the prescribed dofs
-            #====================================================================
-            b -= val * K[:, eq].toarray().ravel()
-
-    for bc in bcs:
-        nodeIDs = node_sets[bc.node_set_name]
-        dof = bc.dof
-        val = bc.value
-        for I in nodeIDs:
-            eq = I * NUM_DOFS + dof
-            #====================================================================
-            # In the second sweep, we modify the system matrix A and right hand
-            # side vector b of the prescribed dofs so that the boundary condition
-            # is obeyed. We do this by setting the rows and cols of the equation
-            # in question to zero except the diagonal, which is one.
-            # This is combined with and setting b to the prescribed value
-            #====================================================================
-            A[:, eq] = 0
-            A[eq, :] = 0
-            A[eq, eq] = 1
-            b[eq] = val
-
-    solver_data.A = A
-    solver_data.b = b
-
-
 def solve(config: Config, solver_data: SolverData, mesh: Mesh):
     """Assembles the stiffness matrix, applies boundary conditions, and solves the system K*r = R."""
 
@@ -110,7 +64,9 @@ def solve(config: Config, solver_data: SolverData, mesh: Mesh):
 
     assemble_stiffness_matrix(mesh, config, solver_data)
 
-    assign_boundary_conditions(config, mesh, solver_data)
+    loads.integrate_loads_consistent(config, mesh, solver_data)
+
+    bcs.assign_boundary_conditions(config, mesh, solver_data)
 
     solver_data.A = solver_data.A.tocsr()  #Convert to csr matrix for more efficient solving
     solver_data.r = spsolve(solver_data.A, solver_data.b)  #Solve the linear system

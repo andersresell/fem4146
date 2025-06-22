@@ -1,8 +1,8 @@
-import shape_functions
-from utils import Config
-from mesh import Mesh
-from element_utils import *
-from solver_data import SolverData
+import src.shape_functions
+from src.utils import Config
+from src.mesh import Mesh
+from src.fem_utils import *
+from src.solver_data import SolverData
 
 
 def calc_Ke_plane_stress_user_Q4(config: Config, mesh: Mesh, e):

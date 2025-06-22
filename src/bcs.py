@@ -1,38 +1,8 @@
-from mesh import Mesh
-from utils import Config, BC
-from element_utils import *
-
-# def add_boundary_condition(config: Config, mesh: Mesh, node_set_name, dof, value=0):
-#     node_sets = mesh.node_sets
-#     bcs = config.bcs
-
-#     try:
-#         if not node_set_name in node_sets:
-#             all_node_set_names = []
-#             for name, _ in node_sets.items():
-#                 all_node_set_names.append(name)
-#             all_node_set_names = str(", ".join(all_node_set_names))
-#             raise Exception("Node set name \'" + node_set_name + "\' is not among the defined node sets: " +
-#                             all_node_set_names)
-
-#         NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
-
-#         if dof < 0:
-#             raise Exception("Tried to assign boundary condition to dof " + str(dof) + ", dof can't be negative")
-#         elif dof >= NUM_DOFS:
-#             raise Exception("Tried to assign boundary condition to dof " + str(dof) + " for a " +
-#                             problem_type_to_string[config.problem_type] + " problem, which only has " + str(NUM_DOFS) +
-#                             " dofs")
-
-#         bc = BC()
-#         bc.value = value
-#         bc.node_set_name = node_set_name
-#         bc.dof = dof
-#         bcs.append()
-
-#     except Exception as e:
-#         print("Error adding boundary condition:", e)
-#         exit(1)
+from scipy.sparse import lil_matrix
+from src.mesh import Mesh
+from src.utils import Config, BC
+from src.solver_data import SolverData
+from src.fem_utils import *
 
 
 def add_boundary_condition(config: Config, mesh: Mesh, node_set_name, dof, value=0):
@@ -44,19 +14,72 @@ def add_boundary_condition(config: Config, mesh: Mesh, node_set_name, dof, value
     bcs = config.bcs
 
     if node_set_name not in node_sets:
-        all_node_set_names = ", ".join(node_sets.keys())
+        all_node_set_names = ", ".join(
+            node_sets.keys())  #Find all available node set names to display in the error message
         raise Exception(f"Node set '{node_set_name}' not found. Available: {all_node_set_names}")
 
-    NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
-
-    if dof < 0:
-        raise Exception(f"Invalid dof {dof}, must be >= 0")
-    elif dof >= NUM_DOFS:
-        raise Exception(f"dof {dof} out of bounds for {problem_type_to_string[config.problem_type]} "
-                        f"(only {NUM_DOFS} dofs)")
+    if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
+        if dof != DOF_U and dof != DOF_V:
+            raise Exception(f"dof {dof} is not valid for {problem_type_to_string[config.problem_type]} "
+                            f"(valid dofs are: DOF_U={DOF_U}, DOF_V={DOF_V})")
+    else:
+        assert config.problem_type == PROBLEM_TYPE_PLATE
+        if dof != DOF_W and dof != DOF_THETAX and dof != DOF_THETAY:
+            raise Exception(f"dof {dof} is not valid for {problem_type_to_string[config.problem_type]} "
+                            f"(valid dofs are: DOF_W={DOF_W}, DOF_THETAX={DOF_THETAX}, DOF_THETAY={DOF_THETAY})")
 
     bc = BC()
     bc.value = value
     bc.node_set_name = node_set_name
     bc.dof = dof
     bcs.append(bc)
+
+
+def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverData):
+    #====================================================================
+    # We specify boundary condtions by zeroing out the row and column of
+    # the system matrix and modify the right hand side appropriately.
+    #====================================================================
+    K = solver_data.K
+    # Create a copy of the stiffness matrix in LIL format for efficient row/col modifications. K is copied
+    # to avoid modifying the original stiffness matrix directly. We want to keep the original stiffness matrix
+    # for computing internal forces later.
+    A = lil_matrix(K.copy())
+    b = solver_data.R_ext.copy(
+    )  #We also copy the external force vector to avoid modifying the original one, for later use
+
+    NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
+    node_sets = mesh.node_sets
+    bcs = config.bcs
+    for bc in bcs:
+        nodeIDs = node_sets[bc.node_set_name]
+        dof = bc.dof
+        val = bc.value
+        for I in nodeIDs:
+            eq = I * NUM_DOFS + dof
+            #====================================================================
+            # In the first sweep, we modify the right hand side vector (b) by
+            # the forces created from the prescribed dofs
+            #====================================================================
+            b -= val * K[:, eq].toarray().ravel()
+
+    for bc in bcs:
+        nodeIDs = node_sets[bc.node_set_name]
+        dof = bc.dof
+        val = bc.value
+        for I in nodeIDs:
+            eq = I * NUM_DOFS + dof
+            #====================================================================
+            # In the second sweep, we modify the system matrix A and right hand
+            # side vector b of the prescribed dofs so that the boundary condition
+            # is obeyed. We do this by setting the rows and cols of the equation
+            # in question to zero except the diagonal, which is one.
+            # This is combined with and setting b to the prescribed value
+            #====================================================================
+            A[:, eq] = 0
+            A[eq, :] = 0
+            A[eq, eq] = 1
+            b[eq] = val
+
+    solver_data.A = A
+    solver_data.b = b

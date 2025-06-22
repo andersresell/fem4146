@@ -5,7 +5,7 @@ import signal
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import plot_tools
-import element_utils
+import fem_utils
 from solid_linear import *
 
 # fmt: off
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     case = "uniaxial tension"
     case = "cantilever tip loaded"
-    element_type = element_utils.TYPE_HEX8
+    element_type = fem_utils.TYPE_HEX8
     plot_scale = 1
     show_nodes=False
 
@@ -43,9 +43,9 @@ if __name__ == "__main__":
     #supress end to model a cantilever beam
     dof_status = create_dof_status(nN)
     nodeIDs_west = get_nodesIDs_set_box("west",nEx,nEy,nEz,element_type)
-    suppress_boundary_box(nodeIDs_west,dof_status,element_utils.DOF_U,nN)
-    suppress_boundary_box(nodeIDs_west,dof_status,element_utils.DOF_V,nN)
-    suppress_boundary_box(nodeIDs_west,dof_status,element_utils.DOF_W,nN)
+    suppress_boundary_box(nodeIDs_west,dof_status,fem_utils.DOF_U,nN)
+    suppress_boundary_box(nodeIDs_west,dof_status,fem_utils.DOF_V,nN)
+    suppress_boundary_box(nodeIDs_west,dof_status,fem_utils.DOF_W,nN)
     # suppress_boundary_box(np.array([0]),dof_status,fem_utils.DOF_V,nN)
     # suppress_boundary_box(np.array([0]),dof_status,fem_utils.DOF_W,nN)
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     else: assert False
     assemble_R_consistent(nodes,Rf,dof_to_eq_number,dof_status,ind,element_type,elements_bound,t_uniform)
 
-    nNl_1D=element_utils.element_type_to_nNl_1D[element_type]
+    nNl_1D=fem_utils.element_type_to_nNl_1D[element_type]
     nNx,nNy,nNz = count_nNx_nNy_nNz(nEx,nEy,nEz,element_type)
 
     nodeIDs_east = get_nodesIDs_set_box("east",nEx,nEy,nEz,element_type)

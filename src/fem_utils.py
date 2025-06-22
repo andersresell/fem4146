@@ -9,8 +9,8 @@ SMALL_VAL = 1e-8
 PROBLEM_TYPE_PLANE_STRESS = 0
 PROBLEM_TYPE_PLATE = 1
 
-problem_type_to_string = {PROBLEM_TYPE_PLANE_STRESS: "plane_stress",
-                          PROBLEM_TYPE_PLATE: "plate"}
+problem_type_to_string = {PROBLEM_TYPE_PLANE_STRESS: "PROBLEM_TYPE_PLANE_STRESS",
+                          PROBLEM_TYPE_PLATE: "PROBLEM_TYPE_PLATE"}
 
 def get_num_dofs_from_problem_type(problem_type):
     if problem_type == PROBLEM_TYPE_PLANE_STRESS:
@@ -22,18 +22,32 @@ def get_num_dofs_from_problem_type(problem_type):
 DOF_U = 0
 DOF_V = 1
 
-DOF_W = 0
-DOF_THETAX =1
-DOF_THETAY =2
+DOF_W = 2
+DOF_THETAX = 3
+DOF_THETAY = 4
 
-# DOF_FREE = 0
-# DOF_SUPPRESSED = 1
+LOAD_TYPE_TRACTION = 0
+LOAD_TYPE_PRESSURE = 1
+LOAD_TYPE_BODY_FORCE = 2
 
-EDGE0_Q4 = 0
-EDGE1_Q4 = 1
-EDGE2_Q4 = 2
-EDGE3_Q4 = 3
-FACE_Q4 = 4
+load_type_to_string = {LOAD_TYPE_TRACTION: "LOAD_TYPE_TRACTION",
+                       LOAD_TYPE_PRESSURE: "LOAD_TYPE_PRESSURE",
+                       LOAD_TYPE_BODY_FORCE: "LOAD_TYPE_BODY_FORCE"}
+
+ELEMENT_GEOMETRY_TYPE_EDGE = 0
+ELEMENT_GEOMETRY_TYPE_FACE = 1
+
+EDGE0_QUAD = 0
+EDGE1_QUAD = 1
+EDGE2_QUAD = 2
+EDGE3_QUAD = 3
+FACE_QUAD = 4
+element_entity_to_geometry_type = {EDGE0_QUAD: ELEMENT_GEOMETRY_TYPE_EDGE,
+                                   EDGE1_QUAD: ELEMENT_GEOMETRY_TYPE_EDGE,
+                                   EDGE2_QUAD: ELEMENT_GEOMETRY_TYPE_EDGE,
+                                   EDGE3_QUAD: ELEMENT_GEOMETRY_TYPE_EDGE,
+                                   FACE_QUAD: ELEMENT_GEOMETRY_TYPE_FACE}
+
 
 ELEMENT_TYPE_Q4 = 0
 ELEMENT_TYPE_Q4R = 1
@@ -90,6 +104,14 @@ element_type_to_nGauss_1D = {ELEMENT_TYPE_Q4: 2,
                              ELEMENT_TYPE_Q9: 3,
                              ELEMENT_TYPE_Q9R: 2,
                              ELEMENT_TYPE_Q16: 4}
+element_uses_reduced_integration = {ELEMENT_TYPE_Q4: False,
+                                 ELEMENT_TYPE_Q4R: True,
+                                 ELEMENT_TYPE_Q4_USER: False,
+                                 ELEMENT_TYPE_Q8: False,
+                                 ELEMENT_TYPE_Q8R: True,
+                                 ELEMENT_TYPE_Q9: False,
+                                 ELEMENT_TYPE_Q9R: True,
+                                 ELEMENT_TYPE_Q16: False}
 
 
 il_to_ij_loc_all ={ELEMENT_TYPE_Q4: [(0,0),(1,0),(1,1),(0,1)],

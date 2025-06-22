@@ -1,24 +1,18 @@
-import numpy as np
 import matplotlib.pyplot as plt
-import signal
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import scipy.linalg
-from element_utils import *
-from matplotlib import cm
-from mesh import Mesh, QuadElementTraits
-from utils import Config
-from solver_data import *
-import element_stiffness
-
-from matplotlib.colors import Normalize
-from matplotlib.cm import ScalarMappable
 import matplotlib.tri as tri
 from matplotlib.collections import LineCollection
 from matplotlib.widgets import Slider, RadioButtons, CheckButtons, TextBox
-from matplotlib.axes import Axes
+import matplotlib.colors as mcolors
+import matplotlib.lines as mlines
+from src.fem_utils import *
+import src.element_stiffness as element_stiffness
+from src.mesh import Mesh, QuadElementTraits
+from src.utils import Config
+from src.solver_data import *
 
 
 def triangulate_quad_mesh(elements, element_type):
+    """Triangulates the mesh for plotting."""
     triangles_glob = []
     outline_glob = []
     nNl = element_type_to_nNl[element_type]
@@ -41,8 +35,6 @@ def triangulate_quad_mesh(elements, element_type):
             triangles = []
             quads = [(0, 4, 8, 7), (4, 1, 5, 8), (8, 5, 2, 6), (7, 8, 6, 3)]
             lines = [(0, 4), (4, 1), (1, 5), (5, 2), (2, 6), (6, 3), (3, 7), (7, 0)]
-            # quads = [(0, 4, 8, 7), (4, 1, 5, 8), (8, 5, 2, 6), (7, 8, 6, 3)]
-            # lines = [(0, 4), (4, 1), (1, 5), (5, 2), (2, 6), (6, 3), (3, 7), (7, 0)]
         elif element_type == ELEMENT_TYPE_Q16:
             triangles = []
             quads = [(0, 4, 12, 11), (4, 5, 13, 12), (5, 1, 6, 13), (11, 12, 15, 10), (12, 13, 14, 15), (13, 6, 7, 14),
@@ -79,11 +71,18 @@ def get_L_domain(nodes):
 
 
 class Plot:
+    """Class for plotting 2D finite element meshes and results. 
+    Includes some GUI elements for interactive plotting.
+    Simply construct an instance of the class to start the GUI."""
+
+    gray_val = 0.5  # 0=black, 1=white
+    cmap_gray = mcolors.LinearSegmentedColormap.from_list("uniform_gray", [(gray_val, gray_val, gray_val)] * 2)
+    cmap_default = "jet"
+    plt.rcParams.update({
+        'font.size': 11  # or any desired size
+    })
 
     def __init__(self, config: Config, mesh: Mesh, solver_data: SolverData):
-        plt.rcParams.update({
-            'font.size': 11  # or any desired size
-        })
 
         self.fig, self.ax = plt.subplots(figsize=(12, 10), dpi=100)
         self.cbar = None
@@ -108,15 +107,28 @@ class Plot:
             self.curr_vspace_bottom_index += 1
             return vspace
 
-        radio_contour_type = RadioButtons(plt.axes([0.05, get_vspace_left(0.05), 0.15, 0.05]), ['disp', 'stress'])
+        radio_contour_type = RadioButtons(plt.axes([0.05, get_vspace_left(0.05), 0.15, 0.05]),
+                                          ['none', 'disp', 'stress'],
+                                          active=1)
         radio_contour_type.ax.set_title('Contour type:')
-        radio_disp_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.06), 0.15, 0.06]), ['mag', 'u', 'v'])
+
+        #Problem type specific options:
+        if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
+            disp_component_options = ['mag', 'u', 'v']
+            stress_component_options = ['mises', 'xx', 'yy', 'xy']
+            arrow_options = ['none', 'disp', 'external forces', 'reaction forces']
+        else:
+            assert config.problem_type == PROBLEM_TYPE_PLATE
+            disp_component_options = ['w', 'thetax', 'thetay']
+            stress_component_options = ['mises', 'xx', 'yy', 'xy']
+            arrow_options = ['none']
+
+        radio_disp_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.06), 0.15, 0.06]), disp_component_options)
         radio_disp_component.ax.set_title('Disp component:')
         radio_stress_component = RadioButtons(plt.axes([0.05, get_vspace_left(0.07), 0.15, 0.07]),
-                                              ['mises', 'xx', 'yy', 'xy'])
+                                              stress_component_options)
         radio_stress_component.ax.set_title('Stress component:')
-        radio_arrows = RadioButtons(plt.axes([0.05, get_vspace_left(0.07), 0.15, 0.07]),
-                                    ['none', 'disp', 'external forces', 'reaction forces'])
+        radio_arrows = RadioButtons(plt.axes([0.05, get_vspace_left(0.07), 0.15, 0.07]), arrow_options)
         radio_arrows.ax.set_title('Arrow type:')
 
         check_buttons = CheckButtons(
@@ -197,31 +209,54 @@ class Plot:
     def plot_2d(self, config: Config, mesh: Mesh, solver_data: SolverData):
 
         triangles, outlines = triangulate_quad_mesh(mesh.elements, config.element_type)
-
         nN = mesh.get_nN()
         nNl = element_type_to_nNl[config.element_type]
         nE = mesh.get_nE()
         nodes = mesh.nodes
-        u, v = unpack_solution(config, mesh, solver_data.r)
-
-        #Global coordinates
-        x = nodes[:, 0] + u * config.disp_scaling
-        y = nodes[:, 1] + v * config.disp_scaling
-        #Coordinades local to the element
-        xE = np.zeros(nE * nNl)
-        yE = np.zeros(nE * nNl)
-        uE = np.zeros(nE * nNl)
-        vE = np.zeros(nE * nNl)
-        for e in range(nE):
-            for il in range(nNl):
-                xE[e * nNl + il] = x[mesh.elements[e, il]]
-                yE[e * nNl + il] = y[mesh.elements[e, il]]
-                uE[e * nNl + il] = u[mesh.elements[e, il]]
-                vE[e * nNl + il] = v[mesh.elements[e, il]]
+        #====================================================================
+        # Calculate position of vertices, displacements, etc.
+        #====================================================================
+        if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
+            u, v = unpack_solution(config, solver_data.r)
+            #Global coordinates
+            x = nodes[:, 0] + u * config.disp_scaling
+            y = nodes[:, 1] + v * config.disp_scaling
+            #Coordinades local to the element
+            xE = np.zeros(nE * nNl)
+            yE = np.zeros(nE * nNl)
+            uE = np.zeros(nE * nNl)
+            vE = np.zeros(nE * nNl)
+            for e in range(nE):
+                for il in range(nNl):
+                    xE[e * nNl + il] = x[mesh.elements[e, il]]
+                    yE[e * nNl + il] = y[mesh.elements[e, il]]
+                    uE[e * nNl + il] = u[mesh.elements[e, il]]
+                    vE[e * nNl + il] = v[mesh.elements[e, il]]
+        else:
+            assert config.problem_type == PROBLEM_TYPE_PLATE
+            w, thetax, thetay = unpack_solution(config, solver_data.r)
+            #Global coordinates
+            x = nodes[:, 0]
+            y = nodes[:, 1]
+            #Coordinades local to the element
+            xE = np.zeros(nE * nNl)
+            yE = np.zeros(nE * nNl)
+            wE = np.zeros(nE * nNl)
+            thetaxE = np.zeros(nE * nNl)
+            thetayE = np.zeros(nE * nNl)
+            for e in range(nE):
+                for il in range(nNl):
+                    xE[e * nNl + il] = x[mesh.elements[e, il]]
+                    yE[e * nNl + il] = y[mesh.elements[e, il]]
+                    wE[e * nNl + il] = w[mesh.elements[e, il]]
+                    thetaxE[e * nNl + il] = thetax[mesh.elements[e, il]]
+                    thetayE[e * nNl + il] = thetay[mesh.elements[e, il]]
 
         #====================================================================
         # Calculate vertex scalar field (determines the color of the mesh)
         #====================================================================
+        vertex_scalar_E = np.zeros(nE * nNl)
+
         if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
             if config.contour_type == "disp":
                 if config.disp_component == "mag":
@@ -233,28 +268,50 @@ class Plot:
                 else:
                     print(f"Unknown displacement component form plotting: {config.disp_component}")
                     exit(1)
-            else:
-                assert config.contour_type == "stress"
+            elif config.contour_type == "stress":
                 vertex_scalar_E = self.calculate_vertex_scalar_from_stress_plane_stress_problem(
                     config, mesh, solver_data)
+            else:
+                assert config.contour_type == "none"
+
         else:
-            assert False  #FIXME
             assert config.problem_type == PROBLEM_TYPE_PLATE
-            w, thetax, thetay = solver_data.unpack_solution(config, mesh, solver_data)
-            disp_mag = w
+            if config.contour_type == "disp":
+                if config.disp_component == "w":
+                    vertex_scalar_E = wE
+                elif config.disp_component == "thetax":
+                    vertex_scalar_E = thetaxE
+                elif config.disp_component == "thetay":
+                    vertex_scalar_E = thetayE
+                else:
+                    print(f"Unknown displacement component for plotting: {config.disp_component}")
+                    exit(1)
+            elif config.contour_type == "stress":
+                assert False  # FIXME: Implement stress calculation for plate problems
+            else:
+                assert config.contour_type == "none"
 
         #====================================================================
         # Plot mesh body
         #====================================================================
         tris = tri.Triangulation(xE, yE, triangles)
-        if config.specify_contour_limits:
+        cmap = self.cmap_default
+        if config.contour_type == "none":
+            vmin = 0
+            vmax = 1
+            cmap = self.cmap_gray
+        elif config.specify_contour_limits:
             vmin = config.contour_min
             vmax = config.contour_max
         else:
             vmin = np.min(vertex_scalar_E)
             vmax = np.max(vertex_scalar_E)
 
-        tpc = self.ax.tripcolor(tris, vertex_scalar_E, shading='gouraud', cmap='jet', vmin=vmin, vmax=vmax)
+        #====================================================================
+        # Plot the mesh body with the specified contour type
+        #====================================================================
+
+        tpc = self.ax.tripcolor(tris, vertex_scalar_E, shading='gouraud', cmap=cmap, vmin=vmin, vmax=vmax)
 
         fig = self.ax.get_figure()
 
@@ -263,6 +320,7 @@ class Plot:
         #====================================================================
         if self.cbar is None:
             self.cbar = fig.colorbar(tpc, ax=self.ax)
+        self.cbar.ax.set_visible(True)
         self.cbar.update_normal(tpc)
         vmin, vmax = tpc.get_clim()
 
@@ -271,29 +329,47 @@ class Plot:
         ticks = np.linspace(vmin, vmax, NUM_TICKS)
         self.cbar.set_ticks(ticks)
 
-        assert config.problem_type == PROBLEM_TYPE_PLANE_STRESS  #FIX IF USING PLATE PROBLEM
-        if config.contour_type == "disp":
-            if config.disp_component == "mag":
-                self.cbar.set_label(r"$u^{\mathrm{mag}} = \sqrt{u^2 + v^2}$")
-            elif config.disp_component == "u":
-                self.cbar.set_label(r"$u$")
-            elif config.disp_component == "v":
-                self.cbar.set_label(r"$v$")
+        if config.contour_type == "none":
+            self.cbar.ax.set_visible(False)
+        elif config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
+            if config.contour_type == "disp":
+                if config.disp_component == "mag":
+                    self.cbar.set_label(r"$u^{\mathrm{mag}} = \sqrt{u^2 + v^2}$")
+                elif config.disp_component == "u":
+                    self.cbar.set_label(r"$u$")
+                elif config.disp_component == "v":
+                    self.cbar.set_label(r"$v$")
+                else:
+                    print(f"Error: Unknown displacement component for plotting: {config.disp_component}")
+            elif config.contour_type == "stress":
+                if config.stress_component == "mises":
+                    self.cbar.set_label(r"$\sigma^{\mathrm{VM}}$")
+                elif config.stress_component == "xx":
+                    self.cbar.set_label(r"$\sigma_{\mathrm{xx}}$")
+                elif config.stress_component == "yy":
+                    self.cbar.set_label(r"$\sigma_{\mathrm{yy}}$")
+                elif config.stress_component == "xy":
+                    self.cbar.set_label(r"$\sigma_{\mathrm{xy}}$")
+                else:
+                    print(f"Error: Unknown stress component for plotting: {config.stress_component}")
             else:
-                print(f"Error: Unknown displacement component for plotting: {config.disp_component}")
-        elif config.contour_type == "stress":
-            if config.stress_component == "mises":
-                self.cbar.set_label(r"$\sigma^{\mathrm{VM}}$")
-            elif config.stress_component == "xx":
-                self.cbar.set_label(r"$\sigma_{\mathrm{xx}}$")
-            elif config.stress_component == "yy":
-                self.cbar.set_label(r"$\sigma_{\mathrm{yy}}$")
-            elif config.stress_component == "xy":
-                self.cbar.set_label(r"$\sigma_{\mathrm{xy}}$")
-            else:
-                print(f"Error: Unknown stress component for plotting: {config.stress_component}")
+                print(f"Error: Unknown contour type for plotting: {config.contour_type}")
         else:
-            print(f"Error: Unknown contour type for plotting: {config.contour_type}")
+            assert config.problem_type == PROBLEM_TYPE_PLATE
+            if config.contour_type == "disp":
+                if config.disp_component == "w":
+                    self.cbar.set_label(r"$w$")
+                elif config.disp_component == "thetax":
+                    self.cbar.set_label(r"$\theta_x$")
+                elif config.disp_component == "thetay":
+                    self.cbar.set_label(r"$\theta_y$")
+                else:
+                    print(f"Error: Unknown displacement component for plotting: {config.disp_component}")
+            elif config.contour_type == "stress":
+                print("Stress contour plotting for plate problems is not implemented yet.")
+                assert False
+            else:
+                print(f"Error: Unknown contour type for plotting: {config.contour_type}")
 
         #====================================================================
         # Plot lines marking elements
@@ -306,7 +382,7 @@ class Plot:
         #====================================================================
         # Plot nodes
         #====================================================================
-        SCALE_NODES = 10
+        SCALE_NODES = 1
 
         SCALE_DOMAIN = 20
         domain_scale = SCALE_DOMAIN / np.sqrt(nN)
@@ -333,12 +409,14 @@ class Plot:
                 if config.arrow_type == "disp":
                     self.plot_arrows(x, y, u, v, "disp", "blue", domain_scale, config.arrow_scale)
                 elif config.arrow_type == "external forces":
-                    Rx_ext, Ry_ext = unpack_solution(config, mesh, solver_data.R_ext)
-                    self.plot_arrows(x, y, Rx_ext, Ry_ext, "external forces", "red", domain_scale, config.arrow_scale)
+                    Rx_ext, Ry_ext = unpack_solution(config, solver_data.R_ext)
+                    self.plot_arrows(x, y, Rx_ext, Ry_ext, "external forces", "red", domain_scale, config.arrow_scale,
+                                     True)
                 elif config.arrow_type == "reaction forces":
                     R_rea = solver_data.R_int - solver_data.R_ext
-                    Rx_rea, Ry_rea = unpack_solution(config, mesh, R_rea)
-                    self.plot_arrows(x, y, Rx_rea, Ry_rea, "reaction forces", "green", domain_scale, config.arrow_scale)
+                    Rx_rea, Ry_rea = unpack_solution(config, R_rea)
+                    self.plot_arrows(x, y, Rx_rea, Ry_rea, "reaction forces", "green", domain_scale, config.arrow_scale,
+                                     True)
                 else:
                     print(f"Unknown arrow type for plotting: {config.arrow_type}")
                     exit(1)
@@ -349,21 +427,23 @@ class Plot:
         # Plot boundary conditions
         #====================================================================
         if config.show_bcs:
-            assert config.problem_type == PROBLEM_TYPE_PLANE_STRESS  # FIXME
             L_domain = get_L_domain(mesh.nodes)
-            s = L_domain * 0.02 * domain_scale
+            s = min(L_domain / 40, L_domain * 0.02 * domain_scale)
+            marker_size = min(7, 5 * domain_scale)
             segments = []
             for bc in config.bcs:
                 nodeIDs_constrained = mesh.node_sets[bc.node_set_name]
                 for I in nodeIDs_constrained:
                     x0, y0 = x[I], y[I]
-                    if bc.dof == DOF_U:
+                    if bc.dof == DOF_U or bc.dof == DOF_THETAY:
                         segments.append([[x0 - s, y0], [x0 + s, y0]])
-                    elif bc.dof == DOF_V:
+                    elif bc.dof == DOF_V or bc.dof == DOF_THETAX:
                         segments.append([[x0, y0 - s], [x0, y0 + s]])
                     else:
-                        raise ValueError("Unsupported DOF in BC")
-            bc_lines = LineCollection(segments, colors='brown', linewidths=5 * domain_scale)
+                        assert config.problem_type == PROBLEM_TYPE_PLATE and bc.dof == DOF_W
+                        plt.plot(x0, y0, "o", color='brown', markersize=marker_size)  #plot a dot for constrained w
+
+            bc_lines = LineCollection(segments, colors='brown', linewidths=marker_size)
             self.ax.add_collection(bc_lines)
 
         if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
@@ -372,26 +452,30 @@ class Plot:
             assert config.problem_type == PROBLEM_TYPE_PLATE
             fig.suptitle(f"Mindlin plate problem: {element_type_to_str[config.element_type]} element")
         self.ax.set_aspect('equal')
+        self.ax.axis('equal')
         self.ax.set_xlabel(r"$x$")
         self.ax.set_ylabel(r"$y$")
 
-    def plot_arrows(self, x, y, field_x, field_y, label, color, domain_scale, user_scale):
+    def plot_arrows(self, x, y, field_x, field_y, label, color, domain_scale, user_scale, show_max_norm=False):
         ARROW_LENGTH_SCALE = 0.05
-        ARROW_WIDTH_SCALE = 0.001
+        ARROW_WIDTH_SCALE = 0.002
         max_vector_norm = np.max(np.sqrt(field_x**2 + field_y**2))
         #handle normalization in a non singular way
         field_x_normalized = field_x / (max_vector_norm + 1e-10)  #ensure safe division
         field_y_normalized = field_y / (max_vector_norm + 1e-10)  #ensure safe division
-        self.ax.quiver(
-            x,
-            y,
-            ARROW_LENGTH_SCALE * user_scale * field_x_normalized,
-            ARROW_LENGTH_SCALE * user_scale * field_y_normalized,
-            color=color,
-            scale=1,  #this scale thing is weird, increasing it makes arrows smaller
-            width=ARROW_WIDTH_SCALE * domain_scale)
-        import matplotlib.lines as mlines
+        if max_vector_norm > 1e-6:  #Don't plot arrows if the max norm is too small, it's just noise
+            self.ax.quiver(
+                x,
+                y,
+                ARROW_LENGTH_SCALE * user_scale * field_x_normalized,
+                ARROW_LENGTH_SCALE * user_scale * field_y_normalized,
+                color=color,
+                scale=1,  #this scale thing is weird, increasing it makes arrows smaller
+                width=ARROW_WIDTH_SCALE * domain_scale)
+
         # Create a proxy handle for the legend
+        if show_max_norm:
+            label += f" (max norm: {max_vector_norm:.2e})"
         arrow_proxy = mlines.Line2D([], [],
                                     color=color,
                                     marker=r'$\rightarrow$',
@@ -399,7 +483,6 @@ class Plot:
                                     markersize=10,
                                     label=label)
         self.ax.legend(handles=[arrow_proxy])
-        self.ax.axis('equal')
 
     def calculate_vertex_scalar_from_stress_plane_stress_problem(self, config: Config, mesh: Mesh,
                                                                  solver_data: SolverData):
@@ -415,7 +498,7 @@ class Plot:
 
         elements = mesh.elements
         r = solver_data.r
-        u, v = unpack_solution(config, mesh, r)
+        u, v = unpack_solution(config, r)
 
         arr_sigma = element_stiffness.calc_stress_plane_stress(config, mesh, nodes, u, v, element_traits.xi_eta)
 

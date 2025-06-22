@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import signal
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import element_utils
+import fem_utils
 from matplotlib import cm
 
 
@@ -10,15 +10,15 @@ def triangulate_quad_mesh(ind, element_type):
     triangles = []
     outline = []
     for e in range(ind.shape[0]):
-        if element_type == element_utils.TYPE_HEX8:
+        if element_type == fem_utils.TYPE_HEX8:
             quads = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (3, 2, 6, 7), (3, 0, 4, 7), (1, 2, 6, 5)]
             lines = [(0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6), (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7)]
-        elif element_type == element_utils.TYPE_HEX27:
+        elif element_type == fem_utils.TYPE_HEX27:
             #only defining quads by outer nodes
             quads = [(0, 2, 8, 6), (18, 20, 26, 24), (6, 0, 18, 24), (2, 8, 26, 20), (0, 2, 20, 18), (8, 6, 24, 26)]
             lines = [(0, 2), (2, 8), (8, 6), (6, 0), (18, 20), (20, 26), (26, 24), (24, 18), (0, 18), (2, 20), (8, 26),
                      (6, 24)]
-        elif element_type == element_utils.TYPE_HEX64:
+        elif element_type == fem_utils.TYPE_HEX64:
             #only defining quads by outer nodes
             quads = [(0, 3, 15, 12), (48, 51, 63, 60), (12, 0, 48, 60), (3, 15, 63, 51), (0, 3, 51, 48),
                      (15, 12, 60, 63)]
@@ -135,7 +135,7 @@ def plot_3d_mesh(nodes, r, triangles, outlines, scale=1, R=np.zeros(0), show_nod
     ax.set_zlabel("Z")
 
     title = ""
-    if element_type in element_utils.element_type_to_str:
-        title += element_utils.element_type_to_str[element_type] + ", "
+    if element_type in fem_utils.element_type_to_str:
+        title += fem_utils.element_type_to_str[element_type] + ", "
     title += "Displacement scale = " + str(scale)
     plt.title(title)

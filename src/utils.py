@@ -1,11 +1,15 @@
-from element_utils import *
+from src.fem_utils import *
 from typing import List
 
 
-#====================================================================
-# Boundary condition
-#====================================================================
 class BC:
+    """
+    Defines a boundary condition:
+    - node_set_name: Name of the node set to which the boundary condition applies
+    - value: The value to which the degree of freedom is set (e.g., displacement)
+    - dof: The degree of freedom that is prescribed (e.g., DOF_U, DOF_V for plane 
+    stress or DOF_W, DOF_THETAX, DOF_THETAY for plate problems)
+    """
 
     def __init__(self):
         self.node_set_name = None
@@ -13,12 +17,37 @@ class BC:
         self.dof = None
 
 
-#====================================================================
-# File that contains most parameters and settings for the simulation
-#====================================================================
+class Load:
+    """
+    Defines a load that can be applied to the mesh. Can be used both for plane stress and plate problems and it
+    can define both surface loads (like traction or pressure) and body forces (like gravity). The element set will define
+    if the load is applied to a surface or a volume.
+    - element_set_name: Name of the element set to which the load applies
+    - load_type: Type of load, e.g., "traction", "pressure", "gravity".
+    - load_function: A lambda function that calculates the load as a function of position.
+                     For example, a traction (2D) or pressure (scalar) for plane stress or a pressure (scalar) for 
+                     plate problems.
+    
+    Example when the problem type is plane stress:
+    load = Load()
+    load.element_set_name = "west"
+    load.load_function = lambda x, y: np.array([10, -1000*x])  # Traction in x and y direction
+    """
+
+    def __call__(self):
+        self.element_set_name = None
+        self.load_type = None
+        self.load_function = None
+
+
 class Config:
+    """Configuration struct that holds all the parameters and settings for the simulation and plotting."""
 
     def __init__(self):
+
+        #====================================================================
+        # Problem settings
+        #====================================================================
         self.E = None  #Young's modulus
         self.nu = None  #Poisson's ratio
         self.h = None  #Plate thickness
@@ -26,6 +55,7 @@ class Config:
         self.problem_type = None  #Plane stress or plate problem
 
         self.bcs: List[BC] = []  #List of boundary conditions
+        self.loads: List[Load] = []  #List of loads
 
         #====================================================================
         # Plot settings
@@ -52,9 +82,5 @@ def create_config(E, nu, h, element_type, problem_type) -> Config:
     config.h = h
     config.element_type = element_type
     config.problem_type = problem_type
-
-    #====================================================================
-    # Plot settings
-    #====================================================================
 
     return config

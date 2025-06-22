@@ -5,7 +5,7 @@ import signal
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 import plot_tools
-import element_utils
+import fem_utils
 from solid_linear import *
 
 # fmt: off
@@ -29,9 +29,9 @@ if __name__ == "__main__":
     CFL = 0.9
     plot_scale = 1
 
-    element_type = element_utils.TYPE_HEX8
+    element_type = fem_utils.TYPE_HEX8
     l_crit = min(dx,dy,dz)
-    nNl_1D = element_utils.element_type_to_nNl_1D[element_type]
+    nNl_1D = fem_utils.element_type_to_nNl_1D[element_type]
     l_crit/=(nNl_1D-1)
 
     nodes, ind = create_mesh_box(nEx, nEy, nEz,Lx,Ly,Lz,element_type)
@@ -40,9 +40,9 @@ if __name__ == "__main__":
     #supress end to model a cantilever beam
     dof_status = create_dof_status(nN)
     nodeIDs_west = get_nodesIDs_set_box("west",nEx,nEy,nEz,element_type)
-    suppress_boundary_box(nodeIDs_west,dof_status,element_utils.DOF_U,nN)
-    suppress_boundary_box(nodeIDs_west,dof_status,element_utils.DOF_V,nN)
-    suppress_boundary_box(nodeIDs_west,dof_status,element_utils.DOF_W,nN)
+    suppress_boundary_box(nodeIDs_west,dof_status,fem_utils.DOF_U,nN)
+    suppress_boundary_box(nodeIDs_west,dof_status,fem_utils.DOF_V,nN)
+    suppress_boundary_box(nodeIDs_west,dof_status,fem_utils.DOF_W,nN)
 
 
     Kff,Rf, Mff, dof_to_eq_number = assemble(nodes,ind,dof_status,E,nu,element_type,rho)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     else: assert False
     assemble_R_consistent(nodes,Rf,dof_to_eq_number,dof_status,ind,element_type,elements_bound,t_uniform)
 
-    nNl_1D=element_utils.element_type_to_nNl_1D[element_type]
+    nNl_1D=fem_utils.element_type_to_nNl_1D[element_type]
     nNx,nNy,nNz = count_nNx_nNy_nNz(nEx,nEy,nEz,element_type)
 
     nodeIDs_east = get_nodesIDs_set_box("east",nEx,nEy,nEz,element_type)
@@ -107,7 +107,7 @@ if __name__ == "__main__":
             r = np.zeros(len(dof_status)) #obtain the full r from rf
             for i in range(len(dof_status)):
                 eq_num = dof_to_eq_number[i]
-                if eq_num != element_utils.NO_EQ:
+                if eq_num != fem_utils.NO_EQ:
                     r[i] = rf[eq_num]
             plt.cla()
             plot_tools.plot_3d_mesh(nodes,r,triangles,outlines,plot_scale,R,False,element_type)
