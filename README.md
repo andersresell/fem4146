@@ -44,7 +44,10 @@ if __name__ == "__main__":
     config = create_config(E, nu, h, element_type, problem_type)
 
     #====================================================================
-    # Create a rectangular structured mesh
+    # Create a rectangular structured mesh. The mesh contains nodal
+    # coordinates, element connectivity and predefined "node sets" 
+    # and "element sets". The sets are used to assign boundary condtions
+    # and perform load integraion.
     #====================================================================
     mesh = create_structured_quad_mesh(config, Lx=Lx, Ly=Ly, nEx=nEx, nEy=nEy)
 
