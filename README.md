@@ -27,7 +27,7 @@ from src.useful_imports import *  #import required functions
 
 if __name__ == "__main__":
 
-    E = 210e9  # Young's modulus in Pa
+    E = 210e9  # Young's modulus 
     nu = 0.3  # Poisson's ratio
     h = 0.01  # Plate thickness in m
     Lx = 10.0  # Length in x-direction
