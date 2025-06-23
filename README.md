@@ -46,7 +46,7 @@ if __name__ == "__main__":
     #====================================================================
     # Create a rectangular structured mesh
     #====================================================================
-    mesh = create_structured_quad_mesh(config, Lx=Lx, Ly=Ly, nEx=nEx, nEy=nEy)
+    mesh = create_structured_quad_mesh(config, Lx, Ly, nEx, nEy)
 
     #====================================================================
     # Add fixed boundary condition  to the left edge called "west"
