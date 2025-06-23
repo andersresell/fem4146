@@ -32,7 +32,7 @@ if __name__ == "__main__":
     h = 0.01  # Plate thickness 
     Lx = 10.0  # Length in x-direction
     Ly = 1.5  # Length in y-direction
-    p0 = 1000000  # Pressure applied to the top edge
+    p0 = 1e6  # Pressure applied to the top edge
     element_type = ELEMENT_TYPE_Q16  # Use 16 node quadrilateral element
     problem_type = PROBLEM_TYPE_PLANE_STRESS  # Specify plane stress problem
     nEx = 20  # Number of elements in x-direction
