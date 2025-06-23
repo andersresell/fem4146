@@ -84,7 +84,7 @@ if __name__ == "__main__":
     nodeIDs_top_ordered = nodeIDs_top[np.argsort(x_top)]
     x_top_ordered = mesh.nodes[nodeIDs_top_ordered, 0] #Take out the x coordinates along the top so that they are ordered
     v_top_ordered = v[nodeIDs_top_ordered] #Take out the lateral displacements v_top_ordered the same way as x_top_ordered 
-    I = Ly**3 * h / 12  #Moment of inertia for a rectangular cross-section
+    I = Ly**3 * h / 12  #Second moment of inertia for a rectangular cross-section
     v_theory = -(p0 * h) / (E * I) * (x_top_ordered**4 / 24 - x_top_ordered**5 /
                                       (120 * Lx) - Lx / 12 * x_top_ordered**3 + Lx**2 / 12 * x_top_ordered**2)
 
