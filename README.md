@@ -65,7 +65,8 @@ if __name__ == "__main__":
 
     #====================================================================
     # Create objects holding system matrices and vectors. Then assemble
-    # stiffness matrix, integrate loads and assign boundary conditions
+    # the stiffness matrix, integrate loads and assign boundary conditions
+    # before finally solving the system K*r = R_ext
     #====================================================================
     solver_data = create_solver_data(config, mesh)
     solve(config, solver_data, mesh)
