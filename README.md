@@ -72,18 +72,18 @@ if __name__ == "__main__":
     # Before starting the GUI, we show how we can do some post-processing of the results
     # Here, we take out the lateral displacement along the top edge and
     # compare it to an analytical beam solution. The beam solution when
-    # the load is given as q(x) = (p0*h) * (1 - x / Lx) is given as:
+    # the load is given as q(x) = -(p0*h) * (1 - x / Lx) is given as:
     # v(x) = -(p0*h) / (E*I) * (x^4 / 24 - x^5 / (120*Lx) - Lx / 12 * x^3 + Lx^2 / 12 * x^2)
     #====================================================================
     #Fetch the individual displacement components from the generalized displacement vector r 
     u, v = unpack_solution(config, solver_data.r) 
     nodeIDs_top = mesh.node_sets["north"] #The node indices of the node set "north"
-    x_top = mesh.nodes[nodeIDs_top, 0] #We get the x-coordinates along the top edge
-    # We sort the nodes along the top edge according to their x-coordinate
+    x_top = mesh.nodes[nodeIDs_top, 0] #Get the x-coordinates along the top edge
+    # Sort the nodes along the top edge according to their x-coordinate
     # since the nodes in the mesh are not necessarily ordered in the x-direction.
     nodeIDs_top_ordered = nodeIDs_top[np.argsort(x_top)]
-    x_top_ordered = mesh.nodes[nodeIDs_top_ordered, 0] #We take out the x coordinates along the top so that they are ordered
-    v_top_ordered = v[nodeIDs_top_ordered] #We also take out the lateral displacements v ordered the same way as x 
+    x_top_ordered = mesh.nodes[nodeIDs_top_ordered, 0] #Take out the x coordinates along the top so that they are ordered
+    v_top_ordered = v[nodeIDs_top_ordered] #Take out the lateral displacements v_top_ordered the same way as x_top_ordered 
     I = Ly**3 * h / 12  #Moment of inertia for a rectangular cross-section
     v_theory = -(p0 * h) / (E * I) * (x_top_ordered**4 / 24 - x_top_ordered**5 /
                                       (120 * Lx) - Lx / 12 * x_top_ordered**3 + Lx**2 / 12 * x_top_ordered**2)
