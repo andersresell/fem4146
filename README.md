@@ -71,7 +71,7 @@ if __name__ == "__main__":
     solver_data = create_solver_data(config, mesh)
     solve(config, solver_data, mesh)
 
-    Plot(config, mesh, solver_data)
+    Plot(config, mesh, solver_data) #Start GUI
 
 
 ```
