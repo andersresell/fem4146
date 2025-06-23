@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     E = 210e9  # Young's modulus 
     nu = 0.3  # Poisson's ratio
-    h = 0.01  # Plate thickness in m
+    h = 0.01  # Plate thickness 
     Lx = 10.0  # Length in x-direction
     Ly = 1.5  # Length in y-direction
     p0 = 1000000  # Pressure applied to the top edge
