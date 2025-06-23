@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # and "element sets". The sets are used to assign boundary conditions
     # and perform load integraion.
     #====================================================================
-    mesh = create_structured_quad_mesh(config, Lx=Lx, Ly=Ly, nEx=nEx, nEy=nEy)
+    mesh = create_structured_quad_mesh(config, Lx, Ly, nEx, nEy)
 
     #====================================================================
     # Add fixed boundary condition to the left edge called "west"
