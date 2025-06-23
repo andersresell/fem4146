@@ -20,7 +20,7 @@ Note that this mesh is finer than the mesh shown above.*
 
 ---
 
-The following script was used to specify the problem displayed above:
+The following script was used to specify the displayed problem:
 
 ```python
 from src.useful_imports import *  #import required functions
