@@ -111,7 +111,7 @@ If we lower Ly from 1.5 to 0.5, the relative tip error is reduced from 2.98% to 
 
 Make sure you have Python 3.8+ with **numpy**, **matplotlib**, and **scipy** installed.
 
-To test the program, clone the project and run:
+To test the program, clone the project, navigate to the project root directory and run:
 
 ```bash
 python main.py
