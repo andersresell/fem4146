@@ -46,7 +46,7 @@ if __name__ == "__main__":
     #====================================================================
     # Create a rectangular structured mesh. The mesh contains nodal
     # coordinates, element connectivity and predefined "node sets" 
-    # and "element sets". The sets are used to assign boundary condtions
+    # and "element sets". The sets are used to assign boundary conditions
     # and perform load integraion.
     #====================================================================
     mesh = create_structured_quad_mesh(config, Lx=Lx, Ly=Ly, nEx=nEx, nEy=nEy)
