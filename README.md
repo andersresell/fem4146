@@ -103,7 +103,7 @@ if __name__ == "__main__":
 ```
 
 ![](beam-comparison.png)  
-*Comparison against beam theory for the current case. The reason that they don't match better is that the length to thickness ratio of the beam (Lx/Ly=10/1.5 = 6.67 < 10) is too low.
+*Comparison against beam theory for the current case. The reason that the curves don't match better is that the length to thickness ratio of the beam (Lx/Ly=10/1.5 = 6.67 < 10) is too low.
 If we lower Ly from 1.5 to 0.5, the relative tip error is reduced from 2.98% to 0.14%.*
 
 
