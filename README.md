@@ -10,7 +10,7 @@
 - Simple GUI (see images below)
 
 ![](fem-node-labels.png)  
-*The current problem has a linearly varying pressure load p(x) = (L_x - x)p_0 applied to the top edge.  
+*The current problem has a linearly varying pressure load p(x) = (1 - x/Lx)p_0 applied to the top edge.  
 The arrows shown are the external nodal forces arising from consistent load integration of this pressure.  
 The brown features on the left edge mark the fixed boundary condition.*
 
