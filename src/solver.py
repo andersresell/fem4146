@@ -64,7 +64,7 @@ def solve(config: Config, solver_data: SolverData, mesh: Mesh):
 
     assemble_stiffness_matrix(mesh, config, solver_data)
 
-    loads.integrate_loads_consistent(config, mesh, solver_data)
+    loads.assemble_loads_consistent(config, mesh, solver_data)
 
     bcs.assign_boundary_conditions(config, mesh, solver_data)
 
