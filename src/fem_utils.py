@@ -25,6 +25,15 @@ DOF_V = 1
 DOF_W = 2
 DOF_THETAX = 3
 DOF_THETAY = 4
+def get_dof_id(dof, problem_type):
+    if problem_type==PROBLEM_TYPE_PLANE_STRESS:
+        dof_id = dof - DOF_U
+        assert dof_id >=0 and dof_id < 2
+    else:
+        assert problem_type==PROBLEM_TYPE_PLATE
+        dof_id = dof - DOF_W
+        assert dof_id >= 0 and dof_id < 3
+    return dof_id
 
 LOAD_TYPE_TRACTION = 0
 LOAD_TYPE_PRESSURE = 1

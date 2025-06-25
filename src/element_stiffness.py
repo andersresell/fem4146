@@ -51,7 +51,7 @@ def calc_Ke_plane_stress(config: Config, mesh: Mesh, e):
     return Ke
 
 
-def calc_Ke_mindlin(config: Config, mesh: Mesh, e):
+def calc_Ke_mindlin_plate(config: Config, mesh: Mesh, e):
     assert config.problem_type == PROBLEM_TYPE_PLATE
     assert e >= 0 and e < mesh.get_nE()
     element_type = config.element_type

@@ -12,15 +12,15 @@ from mindlin_plate_linear import *
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 if __name__ == "__main__":
-    nEx = 2
+    nEx = 1
     nEy = 1
     E = 200e9
-    nu =  0 #0.3
+    nu =  0.3
     Lx = 1
-    Lx_over_h = 100
-    h = Lx/ Lx_over_h
-    Ly = Lx
-    p = 100 #distributed load
+    # Lx_over_h = 100
+    h = 0.001
+    Ly = 1
+    p = 10 #distributed load
     m = 0 #distributed moment
     P = p*Ly
     M = m*Ly

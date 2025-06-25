@@ -19,7 +19,7 @@ def calc_Ke(config: Config, mesh: Mesh, solver_data: SolverData, e):
             return element_stiffness.calc_Ke_plane_stress(config, mesh, e)
     else:
         assert config.problem_type == PROBLEM_TYPE_PLATE
-        return element_stiffness.calc_Ke_mindlin(config, mesh, e)
+        return element_stiffness.calc_Ke_mindlin_plate(config, mesh, e)
 
 
 def assemble_stiffness_matrix(mesh: Mesh, config: Config, solver_data: SolverData):
@@ -70,7 +70,10 @@ def solve(config: Config, solver_data: SolverData, mesh: Mesh):
 
     solver_data.A = solver_data.A.tocsr()  #Convert to csr matrix for more efficient solving
     solver_data.r = spsolve(solver_data.A, solver_data.b)  #Solve the linear system
+
     solver_data.R_int = solver_data.K @ solver_data.r  #Calculate internal forces
 
     elapsed_time = (time.time() - start_time)
     print(f"Solver (assembly and system solution) completed in {elapsed_time:.2f} seconds")
+    rel_res = np.linalg.norm(solver_data.A @ solver_data.r - solver_data.b) / np.linalg.norm(solver_data.b)
+    print(f"Relative solver residual ||A*r - b||/||b|| = {rel_res:.1e} ")

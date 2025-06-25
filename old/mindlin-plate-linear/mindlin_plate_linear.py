@@ -196,8 +196,6 @@ def solve(Kff, Rf, dof_status, dof_to_eq_number):
     Kff_sparse = csr_matrix(Kff)
     rf = spsolve(Kff_sparse,Rf)
 
-    # rf = np.linalg.solve(Kff,Rf)
-
     r = np.zeros(len(dof_status))
     for i in range(len(dof_status)):
         eq_num = dof_to_eq_number[i]
@@ -262,6 +260,7 @@ def assemble_R_consistent(nodes,Rf, dof_to_eq_number,dof_status, ind,element_typ
             coord_y[il] = nodes[I,1]
 
         Re = calc_Re_ext_consistent_tip_shitty(coord_y, element_type, t_uniform)
+        print("Re", Re)
         for i in range(nNl):
             I = ind[e,i]
             for dof_i in range(3):

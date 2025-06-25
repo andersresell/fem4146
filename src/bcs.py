@@ -45,18 +45,17 @@ def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverDa
     # to avoid modifying the original stiffness matrix directly. We want to keep the original stiffness matrix
     # for computing internal forces later.
     A = lil_matrix(K.copy())
-    b = solver_data.R_ext.copy(
-    )  #We also copy the external force vector to avoid modifying the original one, for later use
-
+    #We also copy the external force vector to avoid modifying the original one, for later use
+    b = solver_data.R_ext.copy()
     NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
     node_sets = mesh.node_sets
     bcs = config.bcs
     for bc in bcs:
         nodeIDs = node_sets[bc.node_set_name]
-        dof = bc.dof
+        dof_id = get_dof_id(bc.dof, config.problem_type)
         val = bc.value
         for I in nodeIDs:
-            eq = I * NUM_DOFS + dof
+            eq = I * NUM_DOFS + dof_id
             #====================================================================
             # In the first sweep, we modify the right hand side vector (b) by
             # the forces created from the prescribed dofs
@@ -65,10 +64,10 @@ def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverDa
 
     for bc in bcs:
         nodeIDs = node_sets[bc.node_set_name]
-        dof = bc.dof
+        dof_id = get_dof_id(bc.dof, config.problem_type)
         val = bc.value
         for I in nodeIDs:
-            eq = I * NUM_DOFS + dof
+            eq = I * NUM_DOFS + dof_id
             #====================================================================
             # In the second sweep, we modify the system matrix A and right hand
             # side vector b of the prescribed dofs so that the boundary condition
