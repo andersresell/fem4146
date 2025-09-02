@@ -64,8 +64,18 @@ def calc_Ke_mindlin_plate(config: Config, mesh: Mesh, e):
     nNl = element_type_to_nNl[element_type]
     assert len(x_l) == nNl and len(x_l) == nNl
 
-    D = E * h**3 / (12 * (1 - nu**2)) * np.array([[1, nu, 0], [nu, 1, 0], [0, 0, (1 - nu) / 2]])
+    #fmt: off
+    D = E * h**3 / (12 * (1 - nu**2)) * np.array([[1,   nu, 0],
+                                                  [nu,  1,  0],
+                                                  [0,   0,  (1 - nu) / 2]])
+    #fmt: on
+    #fmt: off
+    D = E * h**3 / (12 * (1 - nu**2)) * np.array([[1,   nu, 0],
+                                                  [nu,  1,  0],
+                                                  [0,   0,  (1 - nu) / 2]])
+    #fmt: on
     Cs = E / (2 * (1 + nu)) * np.identity(2)
+
     hs = 5 / 6 * h
 
     nGauss = shape_functions.element_type_to_nGauss_1D[element_type]
@@ -87,8 +97,13 @@ def calc_Ke_mindlin_plate(config: Config, mesh: Mesh, e):
             Bb = np.zeros((3, 3 * nNl))
             Bs = np.zeros((2, 3 * nNl))
             for k in range(nNl):
-                Bb[:, 3 * k:3 * k + 3] = np.array([[0, 0, -dNdx[k]], [0, dNdy[k], 0], [0, dNdx[k], -dNdy[k]]])
-                Bs[:, 3 * k:3 * k + 3] = np.array([[dNdy[k], -N[k], 0], [dNdx[k], 0, N[k]]])
+                #fmt: off
+                Bb[:, 3 * k:3 * k + 3] = np.array([[0,  0,       -dNdx[k]],
+                                                   [0,  dNdy[k],  0      ],
+                                                   [0,  dNdx[k], -dNdy[k]]])
+                Bs[:, 3 * k:3 * k + 3] = np.array([[dNdy[k], -N[k], 0    ],
+                                                   [dNdx[k],  0,    N[k] ]])
+                #fmt: on
             Ke += (Bb.T @ D @ Bb + hs * Bs.T @ Cs @ Bs) * detJ * weight
 
     return Ke
@@ -128,8 +143,8 @@ def calc_stress_plane_stress(config: Config, mesh: Mesh, nodes, u, v, xi_eta: li
             for k in range(nNl):
                 #fmt: off
                 B[:, 2 * k:2 * k + 2] = np.array([[dNdx[k],     0],
-                                                    [0,       dNdy[k]],
-                                                    [dNdy[k], dNdx[k]]])
+                                                  [0,       dNdy[k]],
+                                                  [dNdy[k], dNdx[k]]])
                 #fmt: on
             arr_sigma[e * nQ + i, :] = D @ B @ r_e
     return arr_sigma

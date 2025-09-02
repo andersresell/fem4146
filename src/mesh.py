@@ -97,7 +97,7 @@ class QuadElementTraits:
         else:
             assert False
 
-        #Test that the shape functions are correct
+        #Test that the shape functions are correct (1 at the node and 0 at all other nodes)
         for il in range(self.nNl):
             xi, eta = self.xi_eta[il]
             N = shape_functions.calc_N(xi, eta, element_type)

@@ -149,7 +149,7 @@ def integrate_element_face_load_plane_stress(config: Config, mesh: Mesh, load: L
         for j in range(nGauss_1D):
             xi = arr_xi[i]
             eta = arr_xi[j]
-            w = arr_w[i]
+            w = arr_w[i] * arr_w[j]
             N = shape_functions.calc_N(xi, eta, element_type)
             J = shape_functions.calc_J(xi, eta, x_l, y_l, element_type)
             detJ = np.linalg.det(J)
@@ -238,7 +238,7 @@ def integrate_element_face_load_plate(config: Config, mesh: Mesh, load: Load, no
         for j in range(nGauss_1D):
             xi = arr_xi[i]
             eta = arr_xi[j]
-            w = arr_w[i]
+            w = arr_w[i] * arr_w[j]
             N = shape_functions.calc_N(xi, eta, element_type)
             J = shape_functions.calc_J(xi, eta, x_l, y_l, element_type)
             detJ = np.linalg.det(J)

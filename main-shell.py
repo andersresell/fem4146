@@ -3,21 +3,21 @@ from src.useful_imports import *  #import required functions
 if __name__ == "__main__":
 
     E = 200e9
-    nu = 0  # 0.3
+    nu = 0.3
     h = 0.001
     Lx = 1.0
-    Ly = 0.1
+    Ly = 0.001
     P = 10
     element_type = ELEMENT_TYPE_Q16
     problem_type = PROBLEM_TYPE_PLATE
-    nEx = 20
-    nEy = 2
+    nEx = 10
+    nEy = 1
 
     config = create_config(E, nu, h, element_type, problem_type)
     mesh = create_structured_quad_mesh(config, Lx, Ly, nEx, nEy)
 
     add_boundary_condition(config, mesh, "west", DOF_W, 0)
-    add_boundary_condition(config, mesh, "west", DOF_THETAX, 0)
+    add_boundary_condition(config, mesh, "south_west", DOF_THETAX, 0)
     add_boundary_condition(config, mesh, "west", DOF_THETAY, 0)
 
     load_func = lambda x, y: P / (h * Ly)

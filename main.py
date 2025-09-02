@@ -6,11 +6,11 @@ if __name__ == "__main__":
     nu = 0.3  # Poisson's ratio
     h = 0.01  # Plate thickness in m
     Lx = 10.0  #Length in x-direction
-    Ly = 1.5  #Length in y-direction
+    Ly = 3.0  #Length in y-direction
     p0 = 1000000  #Pressure applied to the top edge
     element_type = ELEMENT_TYPE_Q16  #Use 16 node quadrilateral element
     problem_type = PROBLEM_TYPE_PLANE_STRESS  #Specify that a plane stress problem is solved
-    nEx = 15  #Number of elements in x-direction
+    nEx = 10  #Number of elements in x-direction
     nEy = 2  #Number of elements in y-direction
 
     #====================================================================
@@ -72,6 +72,10 @@ if __name__ == "__main__":
     plt.legend()
     plt.title("Lateral displacement along the top edge")
     plt.tight_layout()
+    print("v tip:", v_top_ordered[-1])
+    print("v theory:", v_theory[-1])
+    err_percent = abs((v_top_ordered[-1] - v_theory[-1]) / (v_theory[-1])) * 100
+    print(f"Error: {err_percent:.5f}%")
 
     #====================================================================
     # Start the GUI to visualize the results
