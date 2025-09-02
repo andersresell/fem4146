@@ -109,42 +109,79 @@ def calc_Ke_mindlin_plate(config: Config, mesh: Mesh, e):
     return Ke
 
 
-def calc_stress_plane_stress(config: Config, mesh: Mesh, nodes, u, v, xi_eta: list[tuple]):
-    #xi_eta is a list of local coords where the stress is sampled for each element. These
-    #need not correspond to the Gauss points
-
+def calc_stress_plane_stress_consistent(e, config: Config, mesh: Mesh, nodes, u, v, xi_eta: list[tuple]):
     assert config.problem_type == PROBLEM_TYPE_PLANE_STRESS
-    nQ = len(xi_eta)
-    element_type = config.element_type
-    nNl = element_type_to_nNl[config.element_type]
+    assert e >= 0 and e < mesh.get_nE()
     elements = mesh.elements
-    nE = mesh.get_nE()
+    element_type = config.element_type
+    nNl = element_type_to_nNl[element_type]
     E = config.E
     nu = config.nu
+    n_sample_points = len(xi_eta)
+
     #fmt: off
     D = E / (1 - nu**2) * np.array([[1,     nu,     0],
                                     [nu,    1,      0],
                                     [0,     0,  (1 - nu) / 2]])
     #fmt: on
-    arr_sigma = np.zeros((nE * nQ, 3))
+    arr_sigma = np.zeros((n_sample_points, 3))
+    x_l = nodes[elements[e, :], 0]
+    y_l = nodes[elements[e, :], 1]
+    r_e = np.zeros(2 * nNl)
+    r_e[0::2] = u[elements[e, :]]
+    r_e[1::2] = v[elements[e, :]]
 
-    for e in range(nE):
-        x_l = nodes[elements[e, :], 0]
-        y_l = nodes[elements[e, :], 1]
-        r_e = np.zeros(2 * nNl)
-        r_e[0::2] = u[elements[e, :]]
-        r_e[1::2] = v[elements[e, :]]
-
-        assert len(x_l) == nNl and len(y_l) == nNl and len(r_e) == 2 * nNl
-        for i in range(nQ):
-            xi, eta = xi_eta[i]
-            dNdx, dNdy = shape_functions.calc_dNdx_dNdy(xi, eta, x_l, y_l, element_type)
-            B = np.zeros((3, 2 * nNl))
-            for k in range(nNl):
-                #fmt: off
-                B[:, 2 * k:2 * k + 2] = np.array([[dNdx[k],     0],
-                                                  [0,       dNdy[k]],
-                                                  [dNdy[k], dNdx[k]]])
-                #fmt: on
-            arr_sigma[e * nQ + i, :] = D @ B @ r_e
+    assert len(x_l) == nNl and len(y_l) == nNl and len(r_e) == 2 * nNl
+    for i in range(n_sample_points):
+        xi, eta = xi_eta[i]
+        dNdx, dNdy = shape_functions.calc_dNdx_dNdy(xi, eta, x_l, y_l, element_type)
+        B = np.zeros((3, 2 * nNl))
+        for k in range(nNl):
+            #fmt: off
+            B[:, 2 * k:2 * k + 2] = np.array([[dNdx[k],     0],
+                                                [0,       dNdy[k]],
+                                                [dNdy[k], dNdx[k]]])
+            #fmt: on
+        arr_sigma[i, :] = D @ B @ r_e
     return arr_sigma
+
+
+# def calc_stress_plane_stress_consistent_all_elements(config: Config, mesh: Mesh, nodes, u, v, xi_eta: list[tuple]):
+#     #xi_eta is a list of local coords where the stress is sampled for each element. These
+#     #need not correspond to the Gauss points
+
+#     assert config.problem_type == PROBLEM_TYPE_PLANE_STRESS
+#     nQ = len(xi_eta)
+#     element_type = config.element_type
+#     nNl = element_type_to_nNl[config.element_type]
+#     elements = mesh.elements
+#     nE = mesh.get_nE()
+#     E = config.E
+#     nu = config.nu
+#     #fmt: off
+#     D = E / (1 - nu**2) * np.array([[1,     nu,     0],
+#                                     [nu,    1,      0],
+#                                     [0,     0,  (1 - nu) / 2]])
+#     #fmt: on
+#     arr_sigma = np.zeros((nE * nQ, 3))
+
+#     for e in range(nE):
+#         x_l = nodes[elements[e, :], 0]
+#         y_l = nodes[elements[e, :], 1]
+#         r_e = np.zeros(2 * nNl)
+#         r_e[0::2] = u[elements[e, :]]
+#         r_e[1::2] = v[elements[e, :]]
+
+#         assert len(x_l) == nNl and len(y_l) == nNl and len(r_e) == 2 * nNl
+#         for i in range(nQ):
+#             xi, eta = xi_eta[i]
+#             dNdx, dNdy = shape_functions.calc_dNdx_dNdy(xi, eta, x_l, y_l, element_type)
+#             B = np.zeros((3, 2 * nNl))
+#             for k in range(nNl):
+#                 #fmt: off
+#                 B[:, 2 * k:2 * k + 2] = np.array([[dNdx[k],     0],
+#                                                   [0,       dNdy[k]],
+#                                                   [dNdy[k], dNdx[k]]])
+#                 #fmt: on
+#             arr_sigma[e * nQ + i, :] = D @ B @ r_e
+#     return arr_sigma

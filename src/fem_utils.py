@@ -25,6 +25,7 @@ DOF_V = 1
 DOF_W = 2
 DOF_THETAX = 3
 DOF_THETAY = 4
+
 def get_dof_id(dof, problem_type):
     if problem_type==PROBLEM_TYPE_PLANE_STRESS:
         dof_id = dof - DOF_U
