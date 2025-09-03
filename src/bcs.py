@@ -45,6 +45,7 @@ def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverDa
     # to avoid modifying the original stiffness matrix directly. We want to keep the original stiffness matrix
     # for computing internal forces later.
     A = lil_matrix(K.copy())
+
     #We also copy the external force vector to avoid modifying the original one, for later use
     b = solver_data.R_ext.copy()
     NUM_DOFS = get_num_dofs_from_problem_type(config.problem_type)
@@ -58,7 +59,7 @@ def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverDa
             eq = I * NUM_DOFS + dof_id
             #====================================================================
             # In the first sweep, we modify the right hand side vector (b) by
-            # the forces created from the prescribed dofs
+            # the forces created from thconst Mesh &mesh, const NodeFieldData &node_field_data, byte *bufe prescribed dofs
             #====================================================================
             b -= val * K[:, eq].toarray().ravel()
 
@@ -82,3 +83,4 @@ def assign_boundary_conditions(config: Config, mesh: Mesh, solver_data: SolverDa
 
     solver_data.A = A
     solver_data.b = b
+    print("Boundary conditions assigned")

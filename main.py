@@ -8,9 +8,9 @@ if __name__ == "__main__":
     Lx = 5.0  #Length in x-direction
     Ly = 1.0  #Length in y-direction
     p0 = 1000000  #Pressure applied to the top edge
-    element_type = ELEMENT_TYPE_Q4  #Use quadrilateral element
+    element_type = ELEMENT_TYPE_Q16  #Use quadrilateral element
     problem_type = PROBLEM_TYPE_PLANE_STRESS  #Specify that a plane stress problem is solved
-    nEx = 3  #Number of elements in x-direction
+    nEx = 5  #Number of elements in x-direction
     nEy = 1  #Number of elements in y-direction
 
     #====================================================================
@@ -26,11 +26,8 @@ if __name__ == "__main__":
     #====================================================================
     # Add fixed boundary condition  to the left edge called "west"
     #====================================================================
-    # add_boundary_condition(config, mesh, "west", DOF_U, 0)  #set u to 0
-    # add_boundary_condition(config, mesh, "west", DOF_V, 0)  #set v to 0
-
     add_boundary_condition(config, mesh, "west", DOF_U, 0)  #set u to 0
-    add_boundary_condition(config, mesh, "west", DOF_V, 0)  #set v to 0
+    add_boundary_condition(config, mesh, "south_west", DOF_V, 0)  #set v to 0
 
     #====================================================================
     # Assign a linearly varying load on the top edge named "north"

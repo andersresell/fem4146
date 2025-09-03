@@ -447,25 +447,6 @@ class Plot:
         # Plot boundary conditions
         #====================================================================
         self.plot_bcs(config, mesh, x_nodes, y_nodes, domain_scale)
-        # if config.show_bcs:
-        #     L_domain = get_L_domain(mesh.nodes)
-        #     s = min(L_domain / 40, L_domain * 0.02 * domain_scale)
-        #     marker_size = min(7, 5 * domain_scale)
-        #     segments = []
-        #     for bc in config.bcs:
-        #         nodeIDs_constrained = mesh.node_sets[bc.node_set_name]
-        #         for I in nodeIDs_constrained:
-        #             x0, y0 = x_nodes[I], y_nodes[I]
-        #             if bc.dof == DOF_U or bc.dof == DOF_THETAY:
-        #                 segments.append([[x0 - s, y0], [x0 + s, y0]])
-        #             elif bc.dof == DOF_V or bc.dof == DOF_THETAX:
-        #                 segments.append([[x0, y0 - s], [x0, y0 + s]])
-        #             else:
-        #                 assert config.problem_type == PROBLEM_TYPE_PLATE and bc.dof == DOF_W
-        #                 plt.plot(x0, y0, "o", color='brown', markersize=marker_size)  #plot a dot for constrained w
-
-        #     bc_lines = LineCollection(segments, colors='brown', linewidths=marker_size)
-        #     self.ax.add_collection(bc_lines)
 
         if config.problem_type == PROBLEM_TYPE_PLANE_STRESS:
             fig.suptitle(f"Plane stress problem: {element_type_to_str[config.element_type]} element")
@@ -701,17 +682,18 @@ class Plot:
                     #     segments.append([[x0, y0 - s], [x0, y0 + s]])
                     else:
                         assert config.problem_type == PROBLEM_TYPE_PLATE and bc.dof == DOF_W
-                        plt.plot(x0, y0, "o", color='brown', markersize=marker_size)  #plot a dot for constrained w
+                        plt.plot(x0, y0, "o", color='magenta', markersize=marker_size)  #plot a dot for constrained w
 
-            bc_lines = LineCollection(segments, colors='brown', linewidths=marker_size)
+            bc_lines = LineCollection(segments, colors='magenta', linewidths=marker_size)
             self.ax.add_collection(bc_lines)
 
     def set_num_quads_1D_per_element_for_reasonable_plotting(self, nE):
         MAX_1D = 40
         MIN_1D = 5
-        TARGET = 2000
+        # TARGET = 2000
+        TARGET = 4000
         num_quads_1D = int(np.sqrt(TARGET / nE))
         num_quads_1D = int(np.clip(num_quads_1D, MIN_1D, MAX_1D))
         assert MIN_1D <= num_quads_1D <= MAX_1D
         self.NUM_QUADS_PLOT_1D_PER_ELEMENT = num_quads_1D
-        print(f"Using {num_quads_1D}x{num_quads_1D} quads per element for plotting.")
+        print(f"Using {num_quads_1D}x{num_quads_1D} quads per element for contour plotting.")
