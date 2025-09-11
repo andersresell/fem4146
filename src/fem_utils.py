@@ -99,12 +99,12 @@ def element_type_has_hourglass_stiffness(element_type):
 element_type_to_str = {
     ELEMENT_TYPE_Q4: "Q4",
     ELEMENT_TYPE_Q4R: "Q4R",
+    ELEMENT_TYPE_Q4_USER: "Q4_USER",
     ELEMENT_TYPE_Q8: "Q8",
     ELEMENT_TYPE_Q8R: "Q8R",
     ELEMENT_TYPE_Q9: "Q9",
     ELEMENT_TYPE_Q9R: "Q9R",
     ELEMENT_TYPE_Q16: "Q16",
-    ELEMENT_TYPE_Q4_USER: "Q4_USER"
 }
 
 element_type_to_nNl = {
@@ -115,8 +115,7 @@ element_type_to_nNl = {
     ELEMENT_TYPE_Q8R: 8,
     ELEMENT_TYPE_Q9: 9,
     ELEMENT_TYPE_Q9R: 9,
-    ELEMENT_TYPE_Q16: 16,
-    ELEMENT_TYPE_Q4_USER: 4
+    ELEMENT_TYPE_Q16: 16
 }
 
 element_type_to_nNl_1D = {
@@ -131,6 +130,7 @@ element_type_to_nNl_1D = {
 element_type_to_nGauss_1D = {
     ELEMENT_TYPE_Q4: 2,
     ELEMENT_TYPE_Q4R: 1,
+    ELEMENT_TYPE_Q4_USER: 2,
     ELEMENT_TYPE_Q8: 3,
     ELEMENT_TYPE_Q8R: 2,
     ELEMENT_TYPE_Q9: 3,

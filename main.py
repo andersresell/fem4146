@@ -8,7 +8,7 @@ if __name__ == "__main__":
     Lx = 1  #Length in x-direction
     Ly = 1  #Length in y-direction
     q = 0  #1000  #Line load applied to the top edge
-    element_type = ELEMENT_TYPE_Q4R  #Use quadrilateral element
+    element_type = ELEMENT_TYPE_Q4  #Use quadrilateral element
     problem_type = PROBLEM_TYPE_PLANE_STRESS  #Specify that a plane stress problem is solved
     nEx = 1  #Number of elements in x-direction
     nEy = 1  #Number of elements in y-direction

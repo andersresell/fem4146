@@ -19,6 +19,6 @@ def calc_Ke_plane_stress_user_Q4(config: Config, mesh: Mesh, e):
     #====================================================================
     # IMPLEMENT USER-DEFINED Q4 ELEMENT STIFFNESS CALCULATION BELOW:
     #====================================================================
-    print("User-defined Q4 element stiffness calculation not implemented")
+    print("User-defined Q4 element stiffness calculation not implemented")  #Remove this line
 
     return Ke
