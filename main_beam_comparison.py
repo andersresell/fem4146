@@ -2,12 +2,12 @@ from src.useful_imports import *  #import required functions
 
 if __name__ == "__main__":
 
-    E = 210e9  # Young's modulus in Pa
+    E = 210e9  # Young's modulus
     nu = 0.3  # Poisson's ratio
-    h = 0.1  # Plate thickness in m
-    Lx = 2.0  #Length in x-direction
-    Ly = 0.1  #Length in y-direction
-    F_tip = -10000  #Force applied at the right edge
+    Lx = 20  #Length in x-direction
+    Ly = 1  #Length in y-direction
+    h = 0.1  # Length into the third dimension (out of plane thickness)
+    F_tip = -10000  #Total force applied at the right edge. Will be applied as a vertical traction of magnitude F_tip/(h*Ly)
     problem_type = PROBLEM_TYPE_PLANE_STRESS  #Specify that a plane stress problem is solved
     # nEx = 10  #Number of elements in x-direction
     # nEy = 5  #Number of elements in y-direction
@@ -18,7 +18,9 @@ if __name__ == "__main__":
 
     v_theory_tip = v_theory[-1]
 
-    nEys = [10, 3, 1]  #number of elements in y-direction
+    hg_factor = 0.5
+
+    nEys = [3]  # [3, 6, 10]  # 10, 1]  #number of elements in y-direction
     for nEy in nEys:
         if nEy == 1:
             tmp = "element"
@@ -26,16 +28,17 @@ if __name__ == "__main__":
             tmp = "elements"
         name = f"{nEy} {tmp} over the thickness"
         plt.figure(name)
-        plt.title(f"Lateral displacement\n{nEy} elements over the thickness, L/h = {Lx/Ly:.1f}")
+        plt.title(f"Lateral displacement\n{nEy} {tmp} over the thickness, L/h = {Lx/Ly:.1f}")
         plt.plot(x_theory, v_theory, label="Beam theory solution", linestyle='-', linewidth=2, color='black')
         nEx = int(nEy * Lx / Ly)
-        element_types = [ELEMENT_TYPE_Q4, ELEMENT_TYPE_Q8, ELEMENT_TYPE_Q9, ELEMENT_TYPE_Q16]
+        element_types = [ELEMENT_TYPE_Q4, ELEMENT_TYPE_Q4R]  #, ELEMENT_TYPE_Q8, ELEMENT_TYPE_Q9, ELEMENT_TYPE_Q16]
         tip_disps = []
         for element_type in element_types:
             #====================================================================
             # Group problem settings in an object called config
             #====================================================================
             config = create_config(E, nu, h, element_type, problem_type)
+            config.hourglass_scaling = hg_factor
 
             #====================================================================
             # Create a rectangular structured mesh
@@ -46,7 +49,7 @@ if __name__ == "__main__":
             # Add fixed boundary condition  to the left edge called "west"
             #====================================================================
             add_boundary_condition(config, mesh, "west", DOF_U, 0)  #set u to 0
-            add_boundary_condition(config, mesh, "south_west", DOF_V, 0)  #set v to 0
+            add_boundary_condition(config, mesh, "west", DOF_V, 0)  #set v to 0
 
             #====================================================================
             # Assign the tip load as a traction on the right edge named "east"

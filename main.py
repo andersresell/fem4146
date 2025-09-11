@@ -4,19 +4,22 @@ if __name__ == "__main__":
 
     E = 210e9  # Young's modulus in Pa
     nu = 0.3  # Poisson's ratio
-    h = 0.01  # Plate thickness in m
-    Lx = 5.0  #Length in x-direction
-    Ly = 1.0  #Length in y-direction
-    p0 = 1000000  #Pressure applied to the top edge
-    element_type = ELEMENT_TYPE_Q16  #Use quadrilateral element
+    h = 1  # Plate thickness in m
+    Lx = 1  #Length in x-direction
+    Ly = 1  #Length in y-direction
+    q = 0  #1000  #Line load applied to the top edge
+    element_type = ELEMENT_TYPE_Q4R  #Use quadrilateral element
     problem_type = PROBLEM_TYPE_PLANE_STRESS  #Specify that a plane stress problem is solved
-    nEx = 5  #Number of elements in x-direction
+    nEx = 1  #Number of elements in x-direction
     nEy = 1  #Number of elements in y-direction
+
+    p0 = q * h  #Equivalent pressure load for plane stress problem
 
     #====================================================================
     # Group problem settings in an object called config
     #====================================================================
     config = create_config(E, nu, h, element_type, problem_type)
+    config.hourglass_scaling = 0.1
 
     #====================================================================
     # Create a rectangular structured mesh
@@ -26,14 +29,22 @@ if __name__ == "__main__":
     #====================================================================
     # Add fixed boundary condition  to the left edge called "west"
     #====================================================================
-    add_boundary_condition(config, mesh, "west", DOF_U, 0)  #set u to 0
-    add_boundary_condition(config, mesh, "south_west", DOF_V, 0)  #set v to 0
+    add_boundary_condition(config, mesh, "south_west", DOF_U, 0.1)
+    add_boundary_condition(config, mesh, "south_west", DOF_V, 0)
+    add_boundary_condition(config, mesh, "south_east", DOF_U, -0.1)
+    add_boundary_condition(config, mesh, "south_east", DOF_V, 0)
+    add_boundary_condition(config, mesh, "north_east", DOF_U, 0.1)
+    # add_boundary_condition(config, mesh, "north_east", DOF_V, -0.1)
+    add_boundary_condition(config, mesh, "north_west", DOF_U, -0.1)
+    # add_boundary_condition(config, mesh, "north_west", DOF_V, 0)
 
     #====================================================================
     # Assign a linearly varying load on the top edge named "north"
     #====================================================================
     load_func = lambda x, y: p0 * (1 - x / Lx)
-    add_load(config, mesh, "north", LOAD_TYPE_PRESSURE, load_func)
+    load_func = lambda x, y: p0
+
+    # add_load(config, mesh, "north", LOAD_TYPE_PRESSURE, load_func)
 
     # load_func = lambda x, y: 10 * p0
     # add_load(config, mesh, "east", LOAD_TYPE_PRESSURE, load_func)
@@ -45,6 +56,11 @@ if __name__ == "__main__":
     #====================================================================
     solver_data = create_solver_data(config, mesh)
     solve(config, solver_data, mesh)
+
+    K = solver_data.K
+    r = solver_data.r
+    U = 0.5 * r.T @ K @ r
+    print("U =", U / 10**6, "MJ")
 
     # #====================================================================
     # # Before starting the GUI, we show how we can do some post-processing of the results

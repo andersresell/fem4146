@@ -53,6 +53,7 @@ class Config:
         self.h = None  #Plate thickness
         self.element_type = None  #Element type
         self.problem_type = None  #Plane stress or plate problem
+        self.hourglass_scaling = 0.1  #Scaling factor for hourglass stabilization term in Q4R element
 
         self.bcs: List[BC] = []  #List of boundary conditions
         self.loads: List[Load] = []  #List of loads

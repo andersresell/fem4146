@@ -11,6 +11,7 @@ class SolverData:
         self.R_ext = None  # External forces vector
         self.R_int = None  # Internal forces vector (calculated from the stiffness matrix and the solution vector after solving)
         self.K = None  # Stiffness matrix
+        self.K_hg = None  # Hourglass stiffness matrix (only used for some reduced integration elements)
 
         self.A = None  # The system matrix that is solved (K with BCs applied)
         self.b = None  # The right-hand side vector that is solved (R_ext with BCs applied)
