@@ -4,9 +4,9 @@ if __name__ == "__main__":
 
     E = 210e9  # Young's modulus
     nu = 0.3  # Poisson's ratio
-    Lx = 20  #Length in x-direction
+    Lx = 10  #Length in x-direction
     Ly = 1  #Length in y-direction
-    h = 0.1  # Length into the third dimension (out of plane thickness)
+    h = 1  # Length into the third dimension (out of plane thickness)
     F_tip = -10000  #Total force applied at the right edge. Will be applied as a vertical traction of magnitude F_tip/(h*Ly)
     problem_type = PROBLEM_TYPE_PLANE_STRESS  #Specify that a plane stress problem is solved
     # nEx = 10  #Number of elements in x-direction
@@ -18,9 +18,10 @@ if __name__ == "__main__":
 
     v_theory_tip = v_theory[-1]
 
-    hg_factor = 0.5
+    hg_factor = 0.0000001
+    hg_factor = 0.01
 
-    nEys = [3]  # [3, 6, 10]  # 10, 1]  #number of elements in y-direction
+    nEys = [4, 8]  # [3, 6, 10]  # 10, 1]  #number of elements in y-direction
     for nEy in nEys:
         if nEy == 1:
             tmp = "element"
@@ -49,7 +50,7 @@ if __name__ == "__main__":
             # Add fixed boundary condition  to the left edge called "west"
             #====================================================================
             add_boundary_condition(config, mesh, "west", DOF_U, 0)  #set u to 0
-            add_boundary_condition(config, mesh, "west", DOF_V, 0)  #set v to 0
+            add_boundary_condition(config, mesh, "south_west", DOF_V, 0)  #set v to 0
 
             #====================================================================
             # Assign the tip load as a traction on the right edge named "east"
@@ -89,6 +90,13 @@ if __name__ == "__main__":
             plt.plot(x_top_ordered, v_mid_ordered, label=label, linestyle="--")
             tip_disps.append(v_mid_ordered[-1])
 
+        print("\nTip displacements and relative errors:")
+        print("Tip displacement theory:", v_theory_tip)
+        for i, element_type in enumerate(element_types):
+            v_tip = tip_disps[i]
+            print(
+                f"{element_type_to_str[element_type]}: Tip displacement = {v_tip:.3e}, error percent: {((v_tip - v_theory_tip) * 100 / v_theory_tip):.4f}%"
+            )
         plt.xlabel("x")
         plt.ylabel("v")
         plt.legend()
@@ -97,14 +105,6 @@ if __name__ == "__main__":
         #increase dpi for better quality
 
         plt.savefig(name + ".png", dpi=600)
-
-        print("\nTip displacements and relative errors:")
-        print("Tip displacement theory:", v_theory_tip)
-        for i, element_type in enumerate(element_types):
-            v_tip = tip_disps[i]
-            print(
-                f"{element_type_to_str[element_type]}: Tip displacement = {v_tip:.6f}, error percent: {((v_tip - v_theory_tip) * 100 / v_theory_tip):.4f}%"
-            )
 
     #====================================================================
     # Start the GUI to visualize the results
