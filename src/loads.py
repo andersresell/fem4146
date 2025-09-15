@@ -24,9 +24,9 @@ def validate_load_func(f):
             return 2
 
     raise TypeError("""Load function must return a float or a tuple of two floats.\n  
-        Example of valid load functions are: 
-            Two outputs (eg. traction): f_load = lambda x,y: (10,y)
-            One output (eg. pressure): f_load = lambda x,y: 10
+        Two examples of valid load functions are: 
+            Two component load vector (eg. traction): f_load = lambda x,y: (10,y)
+            Scalar load vector (eg. pressure): f_load = lambda x,y: 10
             May also write a function like:
             def f_load(x, y):
                 return 10, y

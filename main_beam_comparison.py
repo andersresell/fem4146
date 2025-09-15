@@ -4,7 +4,7 @@ if __name__ == "__main__":
 
     E = 210e9  # Young's modulus
     nu = 0.3  # Poisson's ratio
-    Lx = 10  #Length in x-direction
+    Lx = 20  #1000  #Length in x-direction
     Ly = 1  #Length in y-direction
     h = 1  # Length into the third dimension (out of plane thickness)
     F_tip = -10000  #Total force applied at the right edge. Will be applied as a vertical traction of magnitude F_tip/(h*Ly)
@@ -20,18 +20,22 @@ if __name__ == "__main__":
 
     hg_factor = 0.0000001
     hg_factor = 0.01
+    ASPECT_RATIO_TARGET = 4  #ratio of Lex/Ley
 
-    nEys = [4, 8]  # [3, 6, 10]  # 10, 1]  #number of elements in y-direction
+    nEys = [3]  #, 8]  # [3, 6, 10]  # 10, 1]  #number of elements in y-direction
     for nEy in nEys:
         if nEy == 1:
             tmp = "element"
         else:
             tmp = "elements"
         name = f"{nEy} {tmp} over the thickness"
+        nEx = int(nEy * Lx / (Ly * ASPECT_RATIO_TARGET))
+        aspect_ratio_actual = (Lx / nEx) / (Ly / nEy)
         plt.figure(name)
-        plt.title(f"Lateral displacement\n{nEy} {tmp} over the thickness, L/h = {Lx/Ly:.1f}")
+        plt.title(
+            f"Lateral displacement\n{nEy} {tmp} over the thickness, L/h = {Lx/Ly:.1f}\nElement aspect ratio = {aspect_ratio_actual:.1f}"
+        )
         plt.plot(x_theory, v_theory, label="Beam theory solution", linestyle='-', linewidth=2, color='black')
-        nEx = int(nEy * Lx / Ly)
         element_types = [ELEMENT_TYPE_Q4, ELEMENT_TYPE_Q4R]  #, ELEMENT_TYPE_Q8, ELEMENT_TYPE_Q9, ELEMENT_TYPE_Q16]
         tip_disps = []
         for element_type in element_types:
@@ -104,7 +108,7 @@ if __name__ == "__main__":
 
         #increase dpi for better quality
 
-        plt.savefig(name + ".png", dpi=600)
+        #plt.savefig(name + ".png", dpi=600)
 
     #====================================================================
     # Start the GUI to visualize the results

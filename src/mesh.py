@@ -382,7 +382,81 @@ def create_structured_Q4_mesh(Lx, Ly, nEx, nEy) -> Mesh:
     return mesh
 
 
-def create_structured_quad_mesh(config: Config, Lx, Ly, nEx, nEy) -> Mesh:
+def perturb_mesh_nodes_of_structured_Q4_mesh(mesh_Q4: Mesh, Lx, Ly, nEx, nEy, perturb_mesh_nodes_factor):
+    """Perturb the nodes of the structured mesh randomly to create badly shaped elements.
+    This is useful to illustrate the effects of badly shaped elements.
+    Note that the border nodes are constrained to stay on the original border."""
+    SAFETY_FACTOR = 0.6
+    if perturb_mesh_nodes_factor <= 0:
+        return
+    else:
+        if perturb_mesh_nodes_factor > 1:
+            print("Error: perturb_mesh_nodes_factor must be between 0 and 1")
+            exit(1)
+
+    nodes = mesh_Q4.nodes
+    dx = Lx / nEx
+    dy = Ly / nEy
+    max_perturbation_dist_x = SAFETY_FACTOR * perturb_mesh_nodes_factor * 0.5 * dx
+    max_perturbation_dist_y = SAFETY_FACTOR * perturb_mesh_nodes_factor * 0.5 * dy
+
+    for i in range(nodes.shape[0]):
+        factor = np.random.uniform(-1.0, 1.0)
+        x, y = nodes[i, :]
+        x_perturbed = x
+        y_perturbed = y
+        if SMALL_VAL < x < Lx - SMALL_VAL:
+            #Node is neither on the left nor right border
+            x_perturbed = x + factor * max_perturbation_dist_x
+            assert 0 <= x_perturbed <= Lx
+        if SMALL_VAL < y < Ly - SMALL_VAL:
+            #Node is neither on the top nor bottom border
+            y_perturbed = y + factor * max_perturbation_dist_y
+            assert 0 <= y_perturbed <= Ly
+        nodes[i, :] = np.array([x_perturbed, y_perturbed])
+
+
+# #====================================================================
+# # Max allowed value for perturb_mesh_nodes_factor (This value is found by trial and error, by checking
+# # when the Jacobian determinant becomes negative for some elements)
+# #====================================================================
+# PERTURB_MESH_NODES_FACTOR_SAFETY = 0.4
+# def perturb_mesh_nodes_of_structured_mesh(config: Config, mesh_Q4: Mesh, Lx, Ly, nEx, nEy, perturb_mesh_nodes_factor):
+#     """Perturb the nodes of the structured mesh randomly to create badly shaped elements.
+#     This is useful to illustrate the effects of badly shaped elements.
+#     Note that the border nodes are constrained to stay on the original border."""
+#     if perturb_mesh_nodes_factor <= 0:
+#         return
+#     else:
+#         if perturb_mesh_nodes_factor > 1:
+#             print(f"Error: perturb_mesh_nodes_factor must be between 0 and 1")
+#             exit(1)
+#     np.random.seed(0)  #For reproducibility. Running the same simulation multiple times should give the same result
+
+#     nodes = mesh_Q4.nodes
+#     nNl_1D = element_type_to_nNl_1D[config.element_type]
+#     dx_min = Lx / (nEx * (nNl_1D - 1))
+#     dy_min = Ly / (nEy * (nNl_1D - 1))
+#     max_perturbation_dist_x = PERTURB_MESH_NODES_FACTOR_SAFETY * perturb_mesh_nodes_factor * 0.5 * dx_min
+#     max_perturbation_dist_y = PERTURB_MESH_NODES_FACTOR_SAFETY * perturb_mesh_nodes_factor * 0.5 * dy_min
+
+#     for i in range(nodes.shape[0]):
+#         factor = np.random.uniform(-1.0, 1.0)
+#         x, y = nodes[i, :]
+#         x_perturbed = x
+#         y_perturbed = y
+#         if SMALL_VAL < x < Lx - SMALL_VAL:
+#             #Node is neither on the left nor right border
+#             x_perturbed = x + factor * max_perturbation_dist_x
+#             assert 0 <= x_perturbed <= Lx
+#         if SMALL_VAL < y < Ly - SMALL_VAL:
+#             #Node is neither on the top nor bottom border
+#             y_perturbed = y + factor * max_perturbation_dist_y
+#             assert 0 <= y_perturbed <= Ly
+#         nodes[i, :] = np.array([x_perturbed, y_perturbed])
+
+
+def create_structured_quad_mesh(config: Config, Lx, Ly, nEx, nEy, perturb_mesh_nodes_factor=0) -> Mesh:
     """Creates a structured rectangular quad mesh with the specified parameters.
     Args:
         config (Config): Configuration object containing problem parameters.
@@ -407,5 +481,7 @@ def create_structured_quad_mesh(config: Config, Lx, Ly, nEx, nEy) -> Mesh:
         exit(1)
 
     mesh_Q4 = create_structured_Q4_mesh(Lx, Ly, nEx, nEy)
+    perturb_mesh_nodes_of_structured_Q4_mesh(mesh_Q4, Lx, Ly, nEx, nEy, perturb_mesh_nodes_factor)
     mesh = create_higher_order_quad_mesh_from_Q4_mesh(mesh_Q4, config)
+    # perturb_mesh_nodes_of_structured_mesh(config, mesh, Lx, Ly, nEx, nEy, perturb_mesh_nodes_factor)
     return mesh

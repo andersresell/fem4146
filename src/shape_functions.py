@@ -140,7 +140,8 @@ def calc_J(xi, eta, x_l, y_l, element_type):
     dNdxi, dNdeta = calc_dNdxi_dNdeta(xi, eta, element_type)
     assert len(x_l) == len(y_l) and len(x_l) == len(dNdxi) and len(y_l) == len(dNdeta)
     J = np.array([[dNdxi.dot(x_l), dNdxi.dot(y_l)], [dNdeta.dot(x_l), dNdeta.dot(y_l)]])
-    assert np.linalg.det(J) > SMALL_VAL
+    detJ = np.linalg.det(J)
+    assert detJ > SMALL_VAL
     return J
 
 

@@ -58,6 +58,10 @@ class Config:
         self.bcs: List[BC] = []  #List of boundary conditions
         self.loads: List[Load] = []  #List of loads
 
+        #If value is > 0 the mesh nodes are randomly perturbed when creating a structured mesh. Magnitude of the perturbation relative to the element size. Enter a value between 0 and 0.99
+        #A value >= 1 is not allowed since it may lead to inverted elements
+        self.perturb_mesh_nodes_factor = 0
+
         #====================================================================
         # Plot settings
         #====================================================================
